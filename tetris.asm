@@ -47,7 +47,7 @@ PURPLE:
 INDIGO:
     .word 0x610f7f
 
-# Set grid dimensions
+# Set grid start and end dimensions
 GRID_START:
     .word 904
 GRID_END:
@@ -68,11 +68,15 @@ BLOCK_SHAPE:
     .word 0
 
 BLOCK_ORIENTATION:
-    .word 0:200
+    .word 0:4
 
-# BLOCK POSITION TO UPDATE
+NEW_SHAPE_FLAG:
+    .word 1
+#invidual blocks of the tetronimo
+
 BLOCK_POSITION:
-    .word 0 # on the grid
+    .word 0:4 
+
 
 ##############################################################################
 # Code
@@ -82,17 +86,23 @@ BLOCK_POSITION:
 
 
 main:
-
+    
     # set intial block position at top
     la $t0, BLOCK_POSITION
     lw $t1, GRID_START
-    
+
     add $t3, $t1, 16
     sw $t3, ($t0)
 
-
-    jal draw_border # set border
+    # randomize what shape to draw
+    li $v0 42
+    li $a1 7
+    li $a0 0
+    syscall
     
+    sw $a0, BLOCK_SHAPE
+    
+    jal draw_border # set border
     jal draw_grid # set grid
     j game_loop
 # END of loop func
@@ -205,179 +215,229 @@ grid_new_line:
     j grid_loop
 
 
-# DRAW SHAPE FUNCTION 
+
+## DRAW SHAPE FUNCTION ##
 draw_shape:
     # save current to stack
     addi $sp, $sp, -4
     sw $ra, 0($sp)
-
-    
     jal draw_grid
-    li $t7, 5
-    beq $t7, 0, draw_o
-    beq $t7, 1, draw_l
-    beq $t7, 2, draw_j
-    beq $t7, 3, draw_z
-    beq $t7, 4, draw_s
-    beq $t7, 5, draw_i
-    beq $t7, 6, draw_t
-    jr $ra
-
-# DRAW_O FUNCTION
-draw_o:
-
-    # gridstart is temporary
-    lw $t0 ADDR_DSPL
-    lw $t1 BLOCK_POSITION # offset of the block_position
-    lw $t2 YELLOW
     
-    # s2 is our current position
-    add $t3, $t0, $t1
-    sw $t2, ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
-    addi $t3, $t3, 124  
-    sw $t2 ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
+    # set registers for new shape and paint shape
+    lw $t0 ADDR_DSPL
+    la $t1 BLOCK_POSITION # offset of the block_position
+    la $t3 NEW_SHAPE_FLAG
+    lw $t6, GRID_START
+    lw $t4, ($t3) # the address of the flag value
+    lw $t7, BLOCK_SHAPE # the shape
+    
+    # if 0, then ...
+    beq $t4, 1, new_shape # initialize the shape
+    # assuming #t2 is stored
+    jal draw_grid_state
+    j paint_shape
+    
+draw_grid_state:
+
+paint_yellow:
+paint_blue:
+paint_orange:
+paint_mint_green:
+paint_red:
+
+# PAINT THE SHAPE
+paint_shape:
+    add $t6, $t0, $t6 # grid start + addr display
+    # draw the blocks that make the shape
+    lw $t5, ($t1) # get block position
+    add $t7, $t6, $t5 
+    sw $s3, ($t7)
+    
+    lw $t5, 4($t1)
+    add $t7, $t6, $t5 
+    sw $s3, ($t7)
+    
+    lw $t5, 8($t1)
+    add $t7, $t6, $t5 
+    sw $s3, ($t7)
+    
+    lw $t5, 12($t1)
+    add $t7, $t6, $t5 
+    sw $s3, ($t7)
     
     # pop stack
     lw $ra, ($sp)
     addi $sp, $sp, 4
-    
     jr $ra
+
+
+# NEW SHAPE
+new_shape:
+    # push stack
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
+    # set the new shape flag to 0
+    li $t4, 0
+    sw $t4, ($t3)
+    
+    beq $t7, 1, draw_o
+    beq $t7, 2, draw_l
+    beq $t7, 3, draw_j
+    beq $t7, 4, draw_z
+    beq $t7, 5, draw_s
+    beq $t7, 6, draw_i
+    beq $t7, 7, draw_t
+    
+
+
+    
+# these shapes are initialized
+draw_o:
+    lw $s3 YELLOW
+
+    # s2 is our current position
+    addi $t5, $zero, 16
+    sw $t5, 0($t1)
+    
+    addi $t5, $t5, 4
+    sw $t5, 4($t1)
+    
+    addi $t5, $t5, 124
+    sw $t5, 8($t1)
+    
+    addi $t5, $t5, 4
+    sw $t5, 12($t1)
+    
+
+    
+    j paint_shape
+
 
 draw_l:
     # gridstart is temporary
-    lw $t0 ADDR_DSPL
-    lw $t1 BLOCK_POSITION # offset of the block_position
-    lw $t2 ORANGE
+    lw $s3 ORANGE
+
+    addi $t5, $zero, 16
+    sw $t5, 0($t1)
     
-    # s2 is our current position
-    add $t3, $t0, $t1
-    sw $t2, ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
-    addi $t3, $t3, 124  
-    sw $t2 ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
+    addi $t5, $t5, 128
+    sw $t5, 4($t1)
     
-    # pop stack
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
+    addi $t5, $t5, 128
+    sw $t5, 8($t1)
     
-    jr $ra   
+    addi $t5, $t5, 4
+    sw $t5, 12($t1)
+    
+
+    
+    j paint_shape
 
 draw_j:
     # gridstart is temporary
-    lw $t0 ADDR_DSPL
-    lw $t1 BLOCK_POSITION # offset of the block_position
-    lw $t2 RED
+
+    lw $s3 RED
+
+    addi $t5, $zero, 16
+    sw $t5, 0($t1)
     
-    # s2 is our current position
-    add $t3, $t0, $t1
-    sw $t2, ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
-    addi $t3, $t3, 124  
-    sw $t2 ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
+    addi $t5, $t5, 128
+    sw $t5, 4($t1)
     
-    # pop stack
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
+    addi $t5, $t5, 124
+    sw $t5, 8($t1)
     
-    jr $ra   
+    addi $t5, $t5, 4
+    sw $t5, 12($t1)
+
+    
+    j paint_shape
 
 draw_t:
     # gridstart is temporary
-    lw $t0 ADDR_DSPL
-    lw $t1 BLOCK_POSITION # offset of the block_position
-    lw $t2 PURPLE
+    lw $s3 PURPLE
+
+
+    addi $t5, $zero, 16
+    sw $t5, 0($t1)
     
-    # s2 is our current position
-    add $t3, $t0, $t1
-    sw $t2, ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
-    addi $t3, $t3, 124  
-    sw $t2 ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
+    addi $t5, $t5, 128
+    sw $t5, 4($t1)
+    
+    addi $t5, $t5, -4
+    sw $t5, 8($t1)
+    
+    addi $t5, $t5, 8
+    sw $t5, 12($t1)
     
     # pop stack
     lw $ra, ($sp)
     addi $sp, $sp, 4
     
-    jr $ra   
+    j paint_shape
 
 draw_z:
     # gridstart is temporary
-    lw $t0 ADDR_DSPL
-    lw $t1 BLOCK_POSITION # offset of the block_position
-    lw $t2 MINT_GREEN
-    
+    lw $s3 MINT_GREEN
+
     # s2 is our current position
-    add $t3, $t0, $t1
-    sw $t2, ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
-    addi $t3, $t3, 124  
-    sw $t2 ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
+
+    addi $t5, $zero, 16
+    sw $t5, 0($t1)
     
-    # pop stack
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
+    addi $t5, $t5, 4
+    sw $t5, 4($t1)
     
-    jr $ra
+    addi $t5, $t5, 128
+    sw $t5, 8($t1)
+    
+    addi $t5, $t5, 4
+    sw $t5, 12($t1)
+
+    j paint_shape
+
 
 draw_s:
     # gridstart is temporary
-    lw $t0 ADDR_DSPL
-    lw $t1 BLOCK_POSITION # offset of the block_position
-    lw $t2 INDIGO
-    
+    lw $s3 INDIGO
+
     # s2 is our current position
-    add $t3, $t0, $t1
-    sw $t2, ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
-    addi $t3, $t3, 124  
-    sw $t2 ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
+    addi $t5, $zero, 16
+    sw $t5, 0($t1)
     
-    # pop stack
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
+    addi $t5, $t5, 4
+    sw $t5, 4($t1)
     
-    jr $ra
+    addi $t5, $t5, 124
+    sw $t5, 8($t1)
+    
+    addi $t5, $t5, -4
+    sw $t5, 12($t1)
+
+    j paint_shape
 
 draw_i:
     # gridstart is temporary
-    lw $t0 ADDR_DSPL
-    lw $t1 BLOCK_POSITION # offset of the block_position
-    lw $t2 BLUE
-    
+    lw $s3 BLUE
+
     # s2 is our current position
-    add $t3, $t0, $t1
-    sw $t2, ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
-    addi $t3, $t3, 124  
-    sw $t2 ($t3)
-    addi $t3, $t3, 4
-    sw $t2 ($t3)
+    addi $t5, $zero, 16
+    sw $t5, 0($t1)
     
-    # pop stack
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
+    addi $t5, $t5, 128
+    sw $t5, 4($t1)
     
-    jr $ra
+    addi $t5, $t5, 128
+    sw $t5, 8($t1)
+    
+    addi $t5, $t5, 128
+    sw $t5, 12($t1)
+    
+
+    j paint_shape
+
+
+## UPDATE FRAMES AND SLEEPER FUNCTION
 
 tick:
     # push value to stack
@@ -409,8 +469,6 @@ game_loop:
     # 3. GRID STATE (ARRAY BEING STORED) -- how to store this array?
     
     jal keyboard_main
-
-
     jal collision
     jal draw_shape
     jal tick # sleep
@@ -419,21 +477,239 @@ game_loop:
     
     b game_loop
 
+generate_tetronimo:
+    # randomize what shape to draw
+    li $v0 42
+    li $a1 7
+    li $a0 0
+    syscall
+    sw $a0, BLOCK_SHAPE
+    
+    jr $ra
+
 # COLLISION CHECK FUNCTION
 # 1. go thru loop
 # 2. if value are equal to one stop and drop and draw a new shape
 # 3. global variable changes
 
 collision:
-    # randomize what shape to draw
-    li $v0 42
-    li $a1 7
-    li $a0 0
-    syscall
+    # here if tetronimo is at the bottom OR
+    # if it is ontop of another tetronimo
+    # how do we check it?
+    # call GRID_STATE
+    # push to stack
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
+    la $t0, BLOCK_POSITION
+
+    li $t2 , 0 # iterate counter
+    li $t3, -4 # count
+    jal check_left_border
     
-    add $t7, $zero, $a0
+    li $t2 , 0 # iterate counter
+    li $t3, 40 # count
+    jal check_right_border
+
+    jal check_bottom_border
+    
+    jal check_landed_on_block
+    # pop stack
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
+    
+    jr $ra
+
+check_left_border:
+    # end condition:
+    beq $t2, 20, END
+        # if this value is on the border push it back
+        lw $t1, ($t0)
+        beq $t1, $t3, push_right
+        lw $t1, 4($t0)
+        beq $t1, $t3, push_right
+        lw $t1, 8($t0)
+        beq $t1, $t3, push_right
+        lw $t1, 12($t0)
+        beq $t1, $t3, push_right
+        addi $t3, $t3, 128
+        addi $t2, $t2, 1
+    j check_left_border
+
+push_right:
+    lw $t1, 0($t0)
+    addi $t1, $t1, 4
+    sw $t1, ($t0)
+    
+    lw $t1, 4($t0)
+    addi $t1, $t1, 4
+    sw $t1, 4($t0)
+    
+    lw $t1, 8($t0)
+    addi $t1, $t1, 4
+    sw $t1, 8($t0)
+    
+    lw $t1, 12($t0)
+    addi $t1, $t1, 4
+    sw $t1, 12($t0)
+    
     jr $ra
     
+
+check_right_border:
+    # end condition:
+    beq $t2, 20, END
+        # if this value is on the border push it back
+        lw $t1, ($t0)
+        beq $t1, $t3, push_left
+        lw $t1, 4($t0)
+        beq $t1, $t3, push_left
+        lw $t1, 8($t0)
+        beq $t1, $t3, push_left
+        lw $t1, 12($t0)
+        beq $t1, $t3, push_left
+        addi $t3, $t3, 128
+        addi $t2, $t2, 1
+    j check_right_border
+
+push_left:
+    lw $t1, 0($t0)
+    addi $t1, $t1, -4
+    sw $t1, ($t0)
+    
+    lw $t1, 4($t0)
+    addi $t1, $t1, -4
+    sw $t1, 4($t0)
+    
+    lw $t1, 8($t0)
+    addi $t1, $t1, -4
+    sw $t1, 8($t0)
+    
+    lw $t1, 12($t0)
+    addi $t1, $t1, -4
+    sw $t1, 12($t0)
+    
+    jr $ra
+
+
+
+check_bottom_border:
+    # if this tetris piece at the bottom we must
+    # 1) update grid state and place the tetronimo 
+    # 2) generate a new piece
+    # 3) reset the the piece position to the origin
+
+    lw $t1, ($t0)
+    bge $t1, 2688, place_block
+    lw $t1, 4($t0)
+    bge $t1, 2688, place_block
+    lw $t1, 8($t0)
+    bge $t1, 2688, place_block
+    lw $t1, 12($t0)
+    bge $t1, 2688, place_block
+    
+    jr $ra
+    
+
+check_landed_on_block:
+    # checks if landed in block
+    # if there is a block underneath another block
+    # t2 and t3 are free to use
+    la $t4, GRID_STATE
+    la $t5, BLOCK_POSITION
+    
+    # if any of our blocks are on top of another one
+    lw $t6, ($t5)
+    addi $t4, $t4, 40
+    
+    add $t7, $t6, $t4
+
+    
+    lw $t6, 4($t5)
+    add $t7, $t6, $t4
+
+    
+    lw $t6, 8($t5)
+    add $t7, $t6, $t4
+
+    
+    lw $t6, 12($t5)
+    add $t7, $t6, $t4
+
+    
+
+    
+
+check_line:
+    # check each line if there are values greater than 1
+    # if there is set to 0,
+    # redraw grid
+    # drops the tetronimo down
+    
+
+place_block:
+    #push to stack
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
+    
+    la $t4, NEW_SHAPE_FLAG
+    li $t5, 1
+    sw $t5, ($t4)
+    j generate_tetronimo
+    # update blocks in the grid
+    jal update_state_grid
+    
+    #pop
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
+    
+    jr $ra
+
+update_state_grid:
+    #set values 
+    # t2, t3 is free to use
+    la $t4, GRID_STATE
+    la $t5, BLOCK_POSITION
+    lw $t8, BLOCK_SHAPE
+    
+    # convert the block position to position
+    # on the grid
+    
+    # divide it by 128...
+    # store quotient
+    # store remainder1
+    # remainder1 divide it by 4
+    # quotient mult it by 10
+    # should be a quotient*10 + remainder1 should be a value 0:200
+    # (quotient*10 + remainder1)*4
+     
+    lw $t6, ($t5)
+    li $t2, 128
+    divu $t6, $t2
+    li $t2, 40
+    multu $t2, $t2
+    #how ever manyi divided this into
+    
+    
+    add $t7, $t6, $t4
+    sw $t8, ($t7)
+    
+    lw $t6, 4($t5)
+    add $t7, $t6, $t4
+    sw $t8, ($t7)
+    
+    lw $t6, 8($t5)
+    add $t7, $t6, $t4
+    sw $t8, ($t7)
+    
+    lw $t6, 12($t5)
+    add $t7, $t6, $t4
+    sw $t8, ($t7)
+    
+    #pop
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
+    
+    jr $ra
 
 # KEYBOARD CHECK FUNCTION
 keyboard_main:
@@ -460,9 +736,24 @@ keyboard_input:                     # A key is pressed
 
 # move left
 respond_to_A:
-    lw $t3, BLOCK_POSITION
-    addi $t3, $t3, -4
-    sw $t3, BLOCK_POSITION
+    la $t3, BLOCK_POSITION
+    
+    lw $t4, 0($t3)
+    addi $t4, $t4, -4
+    sw $t4, 0($t3)
+    
+    lw $t4, 4($t3)  
+    addi $t4, $t4, -4
+    sw $t4, 4($t3)
+    
+    lw $t4, 8($t3)
+    addi $t4, $t4, -4
+    sw $t4, 8($t3)
+    
+    lw $t4, 12($t3)
+    addi $t4, $t4, -4
+    sw $t4, 12($t3)
+    
     li $v0, 1                       # ask system to print $a0
     syscall
     
@@ -475,9 +766,23 @@ respond_to_A:
 
 # move right
 respond_to_D:
-    lw $t3, BLOCK_POSITION
-    addi $t3, $t3, 4
-    sw $t3, BLOCK_POSITION
+    la $t3, BLOCK_POSITION
+
+    lw $t4, 0($t3)
+    addi $t4, $t4, 4
+    sw $t4, 0($t3)
+    
+    lw $t4, 4($t3)  
+    addi $t4, $t4, 4
+    sw $t4, 4($t3)
+    
+    lw $t4, 8($t3)
+    addi $t4, $t4, 4
+    sw $t4, 8($t3)
+    
+    lw $t4, 12($t3)
+    addi $t4, $t4, 4
+    sw $t4, 12($t3)
     
     # print $a0
     li $v0, 1
@@ -491,9 +796,23 @@ respond_to_D:
 
 # move down
 respond_to_S:
-    lw $t3, BLOCK_POSITION
-    addi $t3, $t3, 128
-    sw $t3, BLOCK_POSITION
+    la $t3, BLOCK_POSITION
+    
+    lw $t4, 0($t3)
+    addi $t4, $t4, 128
+    sw $t4, 0($t3)
+    
+    lw $t4, 4($t3)  
+    addi $t4, $t4, 128
+    sw $t4, 4($t3)
+    
+    lw $t4, 8($t3)
+    addi $t4, $t4, 128
+    sw $t4, 8($t3)
+    
+    lw $t4, 12($t3)
+    addi $t4, $t4, 128
+    sw $t4, 12($t3)
     
     # print $a0
     li $v0, 1                       # ask system to print $a0
