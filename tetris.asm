@@ -105,18 +105,31 @@ main:
 
     j game_loop
 
-# END of grid loop 
-END_GRID_LOOP: 
-    # pop stack
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
-    jr $ra
+game_loop:
+	# 1a. Check if key has been pressed
+    # 1b. Check which key has been pressed
+    # 2a. Check for collisions
+	# 2b. Update locations (paddle, ball)
+	# 3. Draw the screen
+	# 4. Sleep
+    # 5. Go back to 1
+    # push
+    addi $sp, $sp, -4
+    sw $ra ($sp)
+    
+    jal keyboard_main # check input
+    jal collision # check for collision
+    jal draw # draw 
+    jal tick # sleep
+    b game_loop
 
-END:
-    jr $ra
+################################
+################################
+### INITIALIZATION FUNCTIONS ### 
+################################
+################################
 
-## DRAW BORDER FUNCTION
-# Meant to draw the border of the game
+
 draw_border:
     lw $t0, ADDR_DSPL
     lw $t1, GRID_START
@@ -394,9 +407,13 @@ init_draw_z:
     jr $ra
 
 
+################################
+################################
+##### DRAWING FUNCTIONS ######## 
+################################
+################################
 
-
-# GRID FUNCTION
+## DRAW GRID FUNCTION ##
 draw_grid:
     lw $t0, ADDR_DSPL
     # load a color based on the pixel
@@ -430,7 +447,7 @@ draw_grid:
 
 grid_loop:
 
-    bge $t1, $t2, END_GRID_LOOP
+    bge $t1, $t2, END_AND_POP
         lw $s1, ($t5) # get the color
         jal set_color #set color
         sw $s0, ($t1)
@@ -447,51 +464,7 @@ grid_new_line:
     j grid_loop
 
 
-set_color:
-    beq $s1, 0, set_light_gray
-    beq $s1, 1, set_dark_gray
-    
-    beq $s1, 2, set_yellow
-    beq $s1, 3, set_orange
-    beq $s1, 4, set_red
-    beq $s1, 5, set_purple
-    beq $s1, 6, set_blue
-    beq $s1, 7, set_indigo
-    beq $s1, 8, set_mint_green
-
-    
-    
-set_light_gray:
-    lw $s0 LIGHT_GRAY
-    jr $ra 
-set_dark_gray:
-    lw $s0 DARK_GRAY
-    jr $ra
-set_yellow:
-    lw $s0 YELLOW
-    jr $ra 
-set_orange:
-    lw $s0 ORANGE
-    jr $ra 
-set_red:
-    lw $s0 RED
-    jr $ra 
-set_purple:
-    lw $s0 PURPLE
-    jr $ra 
-set_blue:
-    lw $s0 BLUE
-    jr $ra 
-set_indigo:
-    lw $s0 INDIGO
-    jr $ra 
-set_mint_green:
-    lw $s0 MINT_GREEN
-    jr $ra 
-
-
-
-## DRAW FUNCTION ##
+## DRAW EVERYTHING FUNCTION ##
 draw:
     # save current to stack
     addi $sp, $sp, -4
@@ -515,10 +488,7 @@ draw:
     # if 1, then initialize a new shape
     beq $t4, 1, new_shape # initialize the shape
 
-    
-    
 
-## PAINT THE SHAPE
 paint_shape:
     lw $t5, 0($t1) # load block position
     add $t8, $t6, $t5  # add to the offset
@@ -541,8 +511,7 @@ paint_shape:
     addi $sp, $sp, 4
     jr $ra
 
-
-## SET NEW SHAPE
+ 
 new_shape:
     # push stack
     addi $sp, $sp, -4
@@ -560,9 +529,6 @@ new_shape:
     beq $t7, 8, draw_z
     
 
-
-    
-# these shapes are initialized
 draw_o:
     lw $s3 YELLOW
 
@@ -706,25 +672,13 @@ draw_z:
     j paint_shape
 
 
-## UPDATE FRAMES AND SLEEPER FUNCTION
+#################################
+#################################
+##### COLLISION FUNCTIONS #######
+#################################
+#################################
 
-tick:
-    # push value to stack
-    addi $sp, $sp, -4
-    sw $ra, ($sp)
-    
-    li $v0, 32 # syscall for sleep
-    li $a0, 100 # 100 millisecond sleep = 10 frames per second
-    syscall 
-    
-
-    # pop
-    lw $ra, ($sp)
-    addi $sp, $sp 4
-    jr $ra
-
-
-
+## COLLISION CHECK FUNCTION ##
 generate_tetronimo:
     # randomize what shape to draw
     li $v0 42
@@ -740,21 +694,12 @@ generate_tetronimo:
     
     jr $ra
 
-# COLLISION CHECK FUNCTION
-# 1. go thru loop
-# 2. if value are equal to one stop and drop and draw a new shape
-# 3. global variable changes
-
 collision:
-    # here if tetronimo is at the bottom OR
-    # if it is ontop of another tetronimo
-    # how do we check it?
-    # call GRID_STATE
-    # push to stack
+    # on the stack
     addi $sp, $sp, -4
     sw $ra, ($sp)
     
-    
+
     la $t0, BLOCK_POSITION
 
     li $t2 , 0 #initiate iterate counter
@@ -767,7 +712,7 @@ collision:
     
     jal check_bottom_border # if landed on
     
-    jal check_landed_on_block
+    # jal check_landed_on_block
     # pop stack
     lw $ra, ($sp)
     addi $sp, $sp, 4
@@ -775,6 +720,7 @@ collision:
     jr $ra
 
 check_left_border:
+
     # end condition:
     beq $t2, 20, END
         # if this value is on the border push it back
@@ -788,6 +734,7 @@ check_left_border:
         beq $t1, $t3, push_right
         addi $t3, $t3, 128
         addi $t2, $t2, 1
+
     j check_left_border
 
 push_right:
@@ -807,7 +754,8 @@ push_right:
     addi $t1, $t1, 4
     sw $t1, 12($t0)
     
-    jr $ra
+    bne $t2, 20, check_left_border
+
     
 
 check_right_border:
@@ -843,7 +791,7 @@ push_left:
     addi $t1, $t1, -4
     sw $t1, 12($t0)
     
-    jr $ra
+    bne $t2, 20, check_right_border
 
 
 check_bottom_border:
@@ -851,7 +799,9 @@ check_bottom_border:
     # 1) update grid state and place the tetronimo 
     # 2) generate a new piece
     # 3) reset the the piece position to the origin
-    
+    #push to stack
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
     
     lw $t1, ($t0)
     bge $t1, 2480, place_block
@@ -862,6 +812,8 @@ check_bottom_border:
     lw $t1, 12($t0)
     bge $t1, 2480, place_block
     
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
     jr $ra
     
 
@@ -879,88 +831,29 @@ check_landed_on_block:
     la $t4, GRID_STATE
     la $t5, BLOCK_POSITION
     
+    li $s0, 0
     # check where the block position is, we write the position on grid as $t6
+    beq $s0, 4, END
+        lw $t6, ($t5) # get the position of the block
+        jal convert_position_to_grid # convert it to a value onto the memory address
+        # if there is a block on left...
+        add $t6, $t6, -4
+        lw $t7 ($t6)
+        bge $t7, 2, push_right
+        # if there is a block on right...
+        add $t6, $t6, 8
+        lw $t7 ($t6)
+        bge $t7, 2, push_left
+        # if there is a block on bottom...
+        add $t6, $t6, 36
+        lw $t7 ($t6)
+        bge $t7, 2, place_block
     
-    lw $t6, ($t5) # get the position of the block
-    jal convert_position_to_grid # convert it to a value onto the memory address
-    # if there is a block on left...
-    add $t6, $t6, -4
-    lw $t7 ($t6)
-    bge $t7, 3, push_right
-    # if there is a block on right...
-    add $t6, $t6, 8
-    lw $t7 ($t6)
-    bge $t7, 3, push_left
-    # if there is a block on bottom...
-    add $t6, $t6, 36
-    lw $t7 ($t6)
-    bge $t7, 3, place_block
-    
-    lw $t6, 4($t5) # get the position of the block
-    jal convert_position_to_grid # convert it to a value onto the memory address
-    # if block on left...
-    add $t6, $t6, -4
-    lw $t7 ($t6)
-    bge $t7, 3, push_right
-    # if block on right...
-    add $t6, $t6, 8
-    lw $t7 ($t6)
-    bge $t7, 3, push_left
-    # if block on bottom...
-    add $t6, $t6, 36
-    lw $t7 ($t6)
-    bge $t7, 3, place_block
-    
-    lw $t6, 8($t5) # get the position of the block
-    jal convert_position_to_grid # convert it to a value onto the memory address
-    # if block on left...
-    add $t6, $t6, -4
-    lw $t7 ($t6)
-    bge $t7, 3, push_right
-    # if block on right...
-    add $t6, $t6, 8
-    lw $t7 ($t6)
-    bge $t7, 3, push_left
-    # if block on bottom...
-    add $t6, $t6, 36
-    lw $t7 ($t6)
-    bge $t7, 3, place_block
-    
-    lw $t6, 12($t5) # get the position of the block
-    jal convert_position_to_grid # convert it to a value onto the memory address
-    # if block on left...
-    add $t6, $t6, -4
-    lw $t7 ($t6)
-    bge $t7, 3, push_right
-    # if block on right...
-    add $t6, $t6, 8
-    lw $t7 ($t6)
-    bge $t7, 3, push_left
-    # if block on bottom...
-    add $t6, $t6, 36
-    lw $t7 ($t6)
-    bge $t7, 3, place_block
-    
-    #pop stack
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
-    
-    jr $ra
-
-    
-
-check_line:
-    # check each line if there are values greater than 1
-    # if there is set to 0,
-    # redraw grid
-    # drops the tetronimo down
+        
+    j check_landed_on_block
     
 
 place_block:
-    #push to stack
-    addi $sp, $sp, -4
-    sw $ra, ($sp)
-    
     # signal to create a new shape
     la $t4, NEW_SHAPE_FLAG
     li $t5, 1
@@ -969,23 +862,25 @@ place_block:
 
     # update blocks in the grid
     jal update_state_grid
-    #if new 
-    jal generate_tetronimo
+    # since we need to place a block, we need to generate a new tetronimo
+    jal generate_tetronimo 
     
-    #pop
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
+    # pop
     
     jr $ra
 
 update_state_grid:
+    # push the stack
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
+    
+    
+    
     #set values 
-  
     la $t4, GRID_STATE
     la $t5, BLOCK_POSITION
     lw $t8, BLOCK_SHAPE 
-    addi $sp, $sp, -4
-    sw $ra, ($sp) 
+
     
 
     lw $t6, ($t5) # get the position of the block
@@ -1003,9 +898,12 @@ update_state_grid:
     lw $t6, 12($t5)
     jal convert_position_to_grid 
     sw $t8, ($t6)
-    
+
+    #pop the stack
     lw $ra, ($sp)
-    add $sp, $sp, 4
+    addi $sp, $sp, 4
+    
+
     jr $ra
 
 convert_position_to_grid:
@@ -1030,13 +928,14 @@ convert_position_to_grid:
     
     add $t6, $t6, $t4 #returns position on grid
 
-    
-    lw $ra ($sp)
-    addi $sp, $sp, 4
+
     jr $ra
 
-
-# KEYBOARD CHECK FUNCTION
+#################################
+#################################
+#### KEYBOARD CHECK FUNCTION ####
+#################################
+#################################
 keyboard_main:
 	li 		$v0, 32
 	li 		$a0, 1
@@ -1165,27 +1064,79 @@ respond_to_w:
     # goes back to wherever.
     jr $ra
 
+## HELPER LABELS ##
 
-game_loop:
-	# 1a. Check if key has been pressed
-    # 1b. Check which key has been pressed
-    # 2a. Check for collisions
-	# 2b. Update locations (paddle, ball)
-	# 3. Draw the screen
-	# 4. Sleep
-    # 5. Go back to 1
+## COLOR SETTING ##
+set_color:
+    # grid color
+    beq $s1, 0, set_light_gray
+    beq $s1, 1, set_dark_gray
     
+    # set color 
+    beq $s1, 2, set_yellow
+    beq $s1, 3, set_orange
+    beq $s1, 4, set_red
+    beq $s1, 5, set_purple
+    beq $s1, 6, set_blue
+    beq $s1, 7, set_indigo
+    beq $s1, 8, set_mint_green
+
+set_light_gray:
+    lw $s0 LIGHT_GRAY
+    jr $ra 
+set_dark_gray:
+    lw $s0 DARK_GRAY
+    jr $ra
+set_yellow:
+    lw $s0 YELLOW
+    jr $ra 
+set_orange:
+    lw $s0 ORANGE
+    jr $ra 
+set_red:
+    lw $s0 RED
+    jr $ra 
+set_purple:
+    lw $s0 PURPLE
+    jr $ra 
+set_blue:
+    lw $s0 BLUE
+    jr $ra 
+set_indigo:
+    lw $s0 INDIGO
+    jr $ra 
+set_mint_green:
+    lw $s0 MINT_GREEN
+    jr $ra
+
+
+
+
+## UPDATE SHAPE AND SLEEPER FUNCTION ##
+tick:
+    # push value to stack
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
     
-    jal keyboard_main # check input
-    jal collision # check for collision
-    jal draw # draw 
-    jal tick # sleep
+    li $v0, 32 # syscall for sleep
+    li $a0, 100 # 100 millisecond sleep = 10 frames per second
+    syscall 
 
+    # pop
+    lw $ra, ($sp)
+    addi $sp, $sp 4
+    jr $ra
 
-    
-    b game_loop    
+## END FUNCTIONALITIES ##
 
+END_AND_POP: 
+    # pop stack
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
+    jr $ra
 
+END:
+    jr $ra
 
 END_GAME: # rip
 	li $v0, 1                   
