@@ -2,7 +2,7 @@
 # This file contains our implementation of Tetris.
 #
 # Student 1: John Ma, 1004274037
-# Student 2: Name, Student Number (if applicable)
+# Student 2: Zixin Zeng, 1008929885 (if applicable)
 ######################## Bitmap Display Configuration ########################
 # - Unit width in pixels:       8
 # - Unit height in pixels:      8
@@ -67,9 +67,6 @@ GRID_STATE:
 BLOCK_SHAPE:
     .word 0 
 
-BLOCK_ORIENTATION:
-    .word 0:4
-
 NEW_SHAPE_FLAG:
     .word 1
 
@@ -97,7 +94,7 @@ main:
     li $a0 0
     syscall
     addi $a0, $a0, 2
-    sw $a0, ($t4)     # set the position for the block
+    sw $a0, ($t4)     # set the block shape
 
     jal init_new_shape
     jal draw_border # set border
@@ -113,9 +110,6 @@ game_loop:
 	# 3. Draw the screen
 	# 4. Sleep
     # 5. Go back to 1
-    # push
-    addi $sp, $sp, -4
-    sw $ra ($sp)
     
     jal keyboard_main # check input
     jal collision # check for collision
@@ -157,7 +151,8 @@ draw_border:
     add $t4, $t0, $t5 # where on the screen
     addi $t3, $zero, 0 # reset iterator
     jal draw_border_bottom
-
+        
+    
     # pop stack
     lw $ra, ($sp)
     addi $sp, $sp, 4
@@ -267,7 +262,6 @@ init_new_shape:
 # these shapes are initialized
 init_draw_o:
     lw $s3 YELLOW
-
 
     addi $t5, $zero, 16
     sw $t5, 0($t1)
@@ -709,10 +703,12 @@ collision:
     li $t2 , 0 #intiate iterate counter
     li $t3, 40 #rightside count
     jal check_right_border
-    
+    # t2 to t8
+    jal check_collision_block
+    # t2 to t8
     jal check_bottom_border # if landed on
     
-    # jal check_landed_on_block
+
     # pop stack
     lw $ra, ($sp)
     addi $sp, $sp, 4
@@ -722,7 +718,7 @@ collision:
 check_left_border:
 
     # end condition:
-    beq $t2, 20, END
+    bge $t2, 20, END
         # if this value is on the border push it back
         lw $t1, ($t0)
         beq $t1, $t3, push_right
@@ -760,7 +756,7 @@ push_right:
 
 check_right_border:
     # end condition:
-    beq $t2, 20, END
+    bge $t2, 20, END
         # if this value is on the border push it back
         lw $t1, ($t0)
         beq $t1, $t3, push_left
@@ -803,6 +799,7 @@ check_bottom_border:
     addi $sp, $sp, -4
     sw $ra, ($sp)
     
+    # push up all values 
     lw $t1, ($t0)
     bge $t1, 2480, place_block
     lw $t1, 4($t0)
@@ -817,7 +814,7 @@ check_bottom_border:
     jr $ra
     
 
-check_landed_on_block:
+check_collision_block:
     # checks if landed in block
     # if there is a block underneath another block
     # t0, t1 are not free to use
@@ -833,25 +830,38 @@ check_landed_on_block:
     
     li $s0, 0
     # check where the block position is, we write the position on grid as $t6
-    beq $s0, 4, END
+    jal check_on_block_loop
+    # pop to stack
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
+    jr $ra 
+
+    
+check_on_block_loop:
+    beq $s0, 4, END_AND_POP
         lw $t6, ($t5) # get the position of the block
         jal convert_position_to_grid # convert it to a value onto the memory address
+
         # if there is a block on left...
         add $t6, $t6, -4
         lw $t7 ($t6)
         bge $t7, 2, push_right
+
         # if there is a block on right...
         add $t6, $t6, 8
         lw $t7 ($t6)
         bge $t7, 2, push_left
+
         # if there is a block on bottom...
         add $t6, $t6, 36
-        lw $t7 ($t6)
+        lw $t7 ($t6) # there should be no value here
         bge $t7, 2, place_block
-    
         
-    j check_landed_on_block
+        addi $s0, $s0, 1
+        addi $t5, $t5, 4
     
+    j check_on_block_loop
+
 
 place_block:
     # signal to create a new shape
@@ -859,7 +869,25 @@ place_block:
     li $t5, 1
     sw $t5, ($t4)
     
+    ## push it back up
+    la $t5, BLOCK_POSITION
 
+    lw $t6, ($t5)
+    addi $t6, $t6, -128
+    sw $t6, ($t5)
+    
+    lw $t6, 4($t5)
+    addi $t6, $t6, -128
+    sw $t6, 4($t5)
+
+    lw $t6, 8($t5)
+    addi $t6, $t6, -128
+    sw $t6, 8($t5)
+    
+    lw $t6, 12($t5)
+    addi $t6, $t6, -128
+    sw $t6, 12($t5)
+    
     # update blocks in the grid
     jal update_state_grid
     # since we need to place a block, we need to generate a new tetronimo
@@ -878,7 +906,7 @@ update_state_grid:
     
     #set values 
     la $t4, GRID_STATE
-    la $t5, BLOCK_POSITION
+
     lw $t8, BLOCK_SHAPE 
 
     
@@ -915,9 +943,10 @@ convert_position_to_grid:
     # quotient mult it by 10
     # should be a quotient*10 + remainder1 should be a value 0:200
     # (quotient*40) + remainder
+    #returns position on memory address of the point on the grid state array
     
     li $t2, 128
-    addi $t6, $t6, -128
+
     div $t6, $t2
     
     mfhi $t3 #remainder
@@ -926,7 +955,7 @@ convert_position_to_grid:
     mul $t6, $t7, $t2
     add $t6, $t3, $t6
     
-    add $t6, $t6, $t4 #returns position on grid
+    add $t6, $t6, $t4 
 
 
     jr $ra
@@ -1127,7 +1156,7 @@ tick:
     addi $sp, $sp 4
     jr $ra
 
-## END FUNCTIONALITIES ##
+## END FUNCTIONALITIES FOR LOOPS##
 
 END_AND_POP: 
     # pop stack
