@@ -699,11 +699,11 @@ collision:
     # pop stack
     j END_AND_POP
 
-check_clear_line:
-    beq $t4, 20, END
+# check_clear_line:
+    # beq $t4, 20, END
     
-check_row_line:
-    beq $t2, 10, END
+# check_row_line:
+    # beq $t2, 10, END
 
 check_left_border:
 
@@ -874,6 +874,12 @@ check_on_block_loop:
         lw $t7 ($t6) # there should be no value here
         bge $t7, 2, place_block
         
+        
+        ### BUG: this issue is that we dont know if the user intends to
+        ### push into the block.
+        ### in this case, if the push into the block we push back
+        ### however if they are going down, we dont need to push back.
+        
         addi $t6, $t6, -40
         lw $t7 ($t6)
         bge $t7, 2, push_right_block
@@ -889,8 +895,6 @@ push_right_block:
     li $a0 888
     li $v0, 1                       # ask system to print $a0
     syscall
-    
-    # ANOTHER CHECK
     
     lw $t1, 0($t0)
     addi $t1, $t1, 4
@@ -948,8 +952,6 @@ update_state_grid:
     # push the stack
     addi $sp, $sp, -4
     sw $ra, ($sp)
-    
-    
     
     #set values 
     la $t4, GRID_STATE
