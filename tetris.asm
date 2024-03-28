@@ -2,7 +2,7 @@
 # This file contains our implementation of Tetris.
 #
 # Student 1: John Ma, 1004274037
-# Student 2: Zixin Zeng, 1008929885 (if applicable)
+# Student 2: Zixin Zeng, 1008929885
 ######################## Bitmap Display Configuration ########################
 # - Unit width in pixels:       8
 # - Unit height in pixels:      8
@@ -801,13 +801,13 @@ check_bottom_border:
     
     # push up all values 
     lw $t1, ($t0)
-    bge $t1, 2480, place_block
+    bge $t1, 2520, place_block
     lw $t1, 4($t0)
-    bge $t1, 2480, place_block
+    bge $t1, 2520, place_block
     lw $t1, 8($t0)
-    bge $t1, 2480, place_block
+    bge $t1, 2520, place_block
     lw $t1, 12($t0)
-    bge $t1, 2480, place_block
+    bge $t1, 2520, place_block
     
     lw $ra, ($sp)
     addi $sp, $sp, 4
@@ -819,7 +819,6 @@ check_collision_block:
     # if there is a block underneath another block
     # t0, t1 are not free to use
     
-    ### TO DO: PUSH RIGHT, PUSH LEFT ARE BRANCHES .... WE NEED TO CHANGE THIS
     
     # push to stack
     addi $sp, $sp, -4
@@ -870,23 +869,23 @@ place_block:
     sw $t5, ($t4)
     
     ## push it back up
-    la $t5, BLOCK_POSITION
+    # la $t5, BLOCK_POSITION
 
-    lw $t6, ($t5)
-    addi $t6, $t6, -128
-    sw $t6, ($t5)
+    # lw $t6, ($t5)
+    # addi $t6, $t6, -128
+    # sw $t6, ($t5)
     
-    lw $t6, 4($t5)
-    addi $t6, $t6, -128
-    sw $t6, 4($t5)
+    # lw $t6, 4($t5)
+    # addi $t6, $t6, -128
+    # sw $t6, 4($t5)
 
-    lw $t6, 8($t5)
-    addi $t6, $t6, -128
-    sw $t6, 8($t5)
+    # lw $t6, 8($t5)
+    # addi $t6, $t6, -128
+    # sw $t6, 8($t5)
     
-    lw $t6, 12($t5)
-    addi $t6, $t6, -128
-    sw $t6, 12($t5)
+    # lw $t6, 12($t5)
+    # addi $t6, $t6, -128
+    # sw $t6, 12($t5)
     
     # update blocks in the grid
     jal update_state_grid
@@ -906,7 +905,7 @@ update_state_grid:
     
     #set values 
     la $t4, GRID_STATE
-
+    la $t5, BLOCK_POSITION
     lw $t8, BLOCK_SHAPE 
 
     
