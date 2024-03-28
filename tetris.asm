@@ -70,6 +70,8 @@ BLOCK_SHAPE:
 NEW_SHAPE_FLAG:
     .word 1
 
+CURRENT_KEY:
+    .word 0
 # 4 positions of the 4 invidual blocks of the tetronimo
 # this is the offset where it will be placed from the 
 # display address, 
@@ -110,6 +112,7 @@ game_loop:
 	# 3. Draw the screen
 	# 4. Sleep
     # 5. Go back to 1
+    
     
     jal keyboard_main # check input
     jal collision # check for collision
@@ -856,39 +859,49 @@ check_collision_block:
     # pop to stack
     j END_AND_POP
 
-# this infinite loops
+
 check_on_block_loop:
     beq $s0, 4, END_AND_POP
         addi $s0, $s0, 1
-        addi $t5, $t5, 4
+        addi $t5, $t5, 4 
         
         lw $t6, ($t5) # get the position of the block
         jal convert_position_to_grid # convert it to a value onto the memory address
-
         # if there is a block on left...
+
+        
+        lw $t8, CURRENT_KEY
+        beq $t8, 0x73, check_bottom
+        
         # check if t6 is 0 or not; because if it there is that means we're at the top border
         lw $t7 ($t6)
         beq $t7, 0, check_on_block_loop
-        # if there is a block on bottom...
-        addi $t6, $t6, 40
-        lw $t7 ($t6) # there should be no value here
-        bge $t7, 2, place_block
         
+        beq $t8, 0x61, check_left
+        beq $t8, 0x64, check_right
         
-        ### BUG: this issue is that we dont know if the user intends to
-        ### push into the block.
-        ### in this case, if the push into the block we push back
-        ### however if they are going down, we dont need to push back.
-        
-        addi $t6, $t6, -40
-        lw $t7 ($t6)
-        bge $t7, 2, push_right_block
-
-        # if there is a block on right...
-        addi $t6, $t6, 4
-        lw $t7 ($t6)
-        bge $t7, 2, push_left_block
     
+    j check_on_block_loop
+
+check_bottom:
+    # if there is a block on bottom...
+    addi $t6, $t6, 40
+    lw $t7 ($t6) 
+    bge $t7, 2, place_block
+    addi $t6, $t6, -40
+    j check_on_block_loop
+    
+check_left:
+    addi $t6, $t6, -4
+    lw $t7 ($t6)
+    bge $t7, 2, push_right_block
+    addi $t6, $t6, 4
+    j check_on_block_loop
+
+check_right:
+    addi $t6, $t6, 4
+    lw $t7 ($t6)
+    bge $t7, 2, push_left_block
     j check_on_block_loop
 
 push_right_block:
@@ -1036,6 +1049,9 @@ keyboard_input:                     # A key is pressed
 respond_to_A:
     la $t3, BLOCK_POSITION
     
+    la $t4, CURRENT_KEY
+    sw $a0, ($t4)
+    
     lw $t4, 0($t3)
     addi $t4, $t4, -4
     sw $t4, 0($t3)
@@ -1065,7 +1081,10 @@ respond_to_A:
 # move right
 respond_to_D:
     la $t3, BLOCK_POSITION
-
+    
+    la $t4, CURRENT_KEY
+    sw $a0, ($t4)
+    
     lw $t4, 0($t3)
     addi $t4, $t4, 4
     sw $t4, 0($t3)
@@ -1096,6 +1115,9 @@ respond_to_D:
 respond_to_S:
     la $t3, BLOCK_POSITION
     
+    la $t4, CURRENT_KEY
+    sw $a0, ($t4)
+    
     lw $t4, 0($t3)
     addi $t4, $t4, 128
     sw $t4, 0($t3)
@@ -1124,6 +1146,10 @@ respond_to_S:
 
 respond_to_w:
     lw $t3, BLOCK_POSITION
+    
+    la $t4, CURRENT_KEY
+    sw $a0, ($t4)
+    
     #jal block_rotate
     
     # print $a0
