@@ -78,6 +78,9 @@ CURRENT_KEY:
 BLOCK_POSITION:
     .word 0:4
 
+# 1 unit is an integer of 4 spaces, this value swtiches between 0 and 4.
+VELOCITY:
+    .word 1
 
 ##############################################################################
 # Code
@@ -693,20 +696,35 @@ collision:
     # t2 to t8
     jal check_bottom_border # if landed on
     
-    # li $t2 , 0 # intiate iterate counter
-    # li $t3, 0 # counts how many values greater than 2
-    # li $t4, 0 # the number of rows
-    # la $t5, GRID_STATE
+    li $t2 , 0 # intiate iterate counter
+    li $t3, 0 # counts how many values greater than 2
+    li $t4, 0 # the number of rows
+    la $t5, GRID_STATE
 
-    # jal check_clear_line
+    jal check_clear_line
     # pop stack
     j END_AND_POP
 
-# check_clear_line:
-    # beq $t4, 20, END
+check_clear_line:
+    beq $t4, 20, END_AND_POP
+        li $t3, 0
+        jal check_row_line
+        addi $t4, $t4, 1
+    j check_clear_line
     
-# check_row_line:
-    # beq $t2, 10, END
+check_row_line:
+    beq $t2, 10, END
+        lw $t6, ($t5)
+        bge $t6, 2, line
+        addi $t2, $t2, 1
+        addi $t5, $t5, 4
+
+line:
+    addi $t3, $t3, 1
+    j check_row_line
+    
+    
+    
 
 check_left_border:
 
@@ -1047,10 +1065,16 @@ keyboard_input:                     # A key is pressed
 
 # move left
 respond_to_A:
+    li $t5, 0
+    lw $t6, VELOCITY
+    beq $t5, $t6, END # dont move if velocity = 0
+    
     la $t3, BLOCK_POSITION
     
     la $t4, CURRENT_KEY
     sw $a0, ($t4)
+    
+
     
     lw $t4, 0($t3)
     addi $t4, $t4, -4
@@ -1080,11 +1104,16 @@ respond_to_A:
 
 # move right
 respond_to_D:
+    li $t5, 0
+    lw $t6, VELOCITY
+    beq $t5, $t6, END # dont move if velocity = 0
+    
     la $t3, BLOCK_POSITION
     
     la $t4, CURRENT_KEY
     sw $a0, ($t4)
     
+
     lw $t4, 0($t3)
     addi $t4, $t4, 4
     sw $t4, 0($t3)
@@ -1113,6 +1142,9 @@ respond_to_D:
 
 # move down
 respond_to_S:
+    li $t5, 0
+    lw $t6, VELOCITY
+    beq $t5, $t6, END # dont move if velocity = 0
     la $t3, BLOCK_POSITION
     
     la $t4, CURRENT_KEY
@@ -1145,12 +1177,16 @@ respond_to_S:
     jr $ra
 
 respond_to_w:
-    lw $t3, BLOCK_POSITION
+    la $t3, BLOCK_POSITION
     
     la $t4, CURRENT_KEY
     sw $a0, ($t4)
     
-    #jal block_rotate
+    # PUSH TO STACK
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
+    
+    jal block_rotate
     
     # print $a0
     li $v0, 1                       # ask system to print $a0
@@ -1163,6 +1199,95 @@ respond_to_w:
     
     # goes back to wherever.
     jr $ra
+
+block_rotate:
+    # Let our first address be our pivot
+    # we can use t0, t1, t2 , t5 - t9 here
+    li $t6 128
+    li $t2, 4
+    # get pivot which is the first value
+    lw $t5, ($t3)
+    div $t5 $t6
+    # remainder is our x, quotient is our y
+    mfhi $t7 # px -- but in a different form
+    mflo $t8 # py 
+    
+    div $t7, $t2
+    mflo $t7 # px
+    
+    # $t7 = px, $t8 = py
+    
+    ###############################
+    lw $t5, 4($t3)
+    div $t5, $t6
+    mfhi $t0 #x1
+    mflo $t1 #y1 
+
+    div $t0, $t2
+    mflo $t0
+
+    add $t0, $t0, $t8
+    sub $t0, $t0, $t7 # y2
+    
+    sub $t1, $t7, $t1
+    add $t1, $t8, $t1 # x2
+    
+    mul $t0, $t0, $t6 # y2 * 128
+    mul $t1, $t1, $t2 # x2 * 4
+    
+    add $t5, $t1, $t0
+    sw $t5, 4($t3)
+
+    ###############################
+    lw $t5, 8($t3)
+    div $t5, $t6
+    mfhi $t0 #x1
+    mflo $t1 #y1 
+
+    div $t0, $t2
+    mflo $t0
+
+    add $t0, $t0, $t8
+    sub $t0, $t0, $t7 # y2
+    
+    sub $t1, $t7, $t1
+    add $t1, $t8, $t1 # x2
+    
+    mul $t0, $t0, $t6 # y2 * 128
+    mul $t1, $t1, $t2 # x2 * 4
+    
+    add $t5, $t1, $t0
+    
+    sw $t5, 8($t3)
+    
+    
+    ###############################
+    lw $t5, 12($t3)
+    div $t5, $t6
+    mfhi $t0 #x1 # remainder... mult of a 4...
+    mflo $t1 #y1 
+    
+    div $t0, $t2
+    mflo $t0
+    
+    add $t0, $t0, $t8
+    sub $t0, $t0, $t7 # y2
+    
+    sub $t1, $t7, $t1
+    add $t1, $t8, $t1 # x2
+    
+    mul $t0, $t0, $t6 # y2 * 128
+    mul $t1, $t1, $t2 # x2 * 4
+    
+    add $t5, $t1, $t0
+    
+    sw $t5, 12($t3)
+    
+    j END_AND_POP
+    
+    
+    
+    
 
 ## HELPER LABELS ##
 
