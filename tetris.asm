@@ -706,6 +706,8 @@ collision:
     j END_AND_POP
 
 check_clear_line:
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
     beq $t4, 20, END_AND_POP
         li $t3, 0
         jal check_row_line
@@ -715,17 +717,97 @@ check_clear_line:
 check_row_line:
     beq $t2, 10, END
         lw $t6, ($t5)
-        bge $t6, 2, line
+        bge $t6, 2, blocks
         addi $t2, $t2, 1
         addi $t5, $t5, 4
+        beq $t3, 10, clear_line
 
-line:
+clear_line:
+    # so we should know what values we're at 
+    # t4 is whatever row we're on
+    # shift the values from row t4 downwards 
+    # only if they are values greater than or equal to 2
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
+    
+    li $t8, 0
+    li $t2, 0
+    jal remove_line # remove the line
+    li $t8, 0
+    li $t2, 0
+    add $t8, $t8, $t5 # set it to start of the grid
+    jal shift_rows # shift lines down
+    j check_clear_line # go back 
+
+remove_line:
+    # at t4 we remove each value
+    # if even ->  0 1
+    # if odd ->  1 0
+
+    li $t7 2
+    div $t4, $t7
+    mfhi $t7
+    mul $t8, $t4, 40 # get the offset 
+    add $t8, $t8, $t5 # address in the grid
+    beq $t7, 0, reset_grid_even # even
+    bne, $t7, 0, reset_grid_odd # odd
+
+reset_grid_even:
+    # set this to 01 01 01 for the line
+    # t5 is grid state
+    beq $t2, 5, END
+        # so we're at the row $t4
+        li $t9, 1
+        sw $t9, ($t8)
+        li $t9, 0
+        sw $t9, ($t8)
+        addi $t8, $t8, 8
+        addi $t2, $t2, 1
+        
+    j reset_grid_even
+
+reset_grid_odd:
+    # this to 10 10 10 for the line
+    beq $t2, 5, END
+        # so we're at the row $t4
+        # store
+        li $t9, 0
+        sw $t9, ($t8)
+        li $t9, 1
+        sw $t9, ($t8)
+        
+        addi $t8, $t8, 8
+        addi $t2, $t2, 1
+
+    j reset_grid_odd
+
+# when shifting rows start from the clear and go up
+shift_rows:
+    ble $t8, 40, END_AND_POP
+        li $t2, 0
+        bge $t8, 2, shift # if the current row is coloured shift down.
+        addi $t8, $t8, -40
+        
+    j shift_rows
+
+shift:
+    #values here get put in 
+    beq $t2, 40, shift_rows 
+        # shift down
+        addi $t8, $t8, -40
+        add $t8, $t8, $t2
+        lw $t9 ($t8)
+        addi $t8, $t8, 40
+        sw $t9, ($t8)
+        addi $t2, $t2, 4     
+        
+
+blocks:
     addi $t3, $t3, 1
     j check_row_line
     
     
     
-
 check_left_border:
 
     # end condition:
@@ -838,6 +920,7 @@ check_bottom_border:
 
 bottom_border_detected:
     ## push it back up
+    
     la $t5, BLOCK_POSITION
     lw $t6, ($t5)
     addi $t6, $t6, -128
@@ -910,14 +993,12 @@ check_bottom:
     j check_on_block_loop
     
 check_left:
-    addi $t6, $t6, -4
     lw $t7 ($t6)
     bge $t7, 2, push_right_block
     addi $t6, $t6, 4
     j check_on_block_loop
 
 check_right:
-    addi $t6, $t6, 4
     lw $t7 ($t6)
     bge $t7, 2, push_left_block
     j check_on_block_loop
@@ -1217,6 +1298,8 @@ block_rotate:
     
     # $t7 = px, $t8 = py
     
+    # No loop here just to 
+    # put this all under this label 
     ###############################
     lw $t5, 4($t3)
     div $t5, $t6
