@@ -795,17 +795,17 @@ clear_line:
     
     li $t9 40
     mul $t4, $t9, $t1 # the offset -- how many rows we're down
-    add $s5, $s0, $t4 # the grid address to start at
+    add $s7, $s0, $t4 # the grid address to start at
     addi $t4, $t1, 0
     jal remove_line # remove the line
    
     li $t9 40
     mul $t4, $t9, $t1 # the offset -- how many rows we're down
-    add $s5, $s0, $t4 # the grid address to start at
+    add $s7, $s0, $t4 # the grid address to start at
     addi $t4, $t1, 0
     jal shift_rows # shift lines down
     
-    
+    addi $t1, $t1, 1
     j check_clear_line # go back 
 
 remove_line:
@@ -827,10 +827,10 @@ reset_grid_odd:
     beq $s1, 5, END
         # so we're at the row $t4
         li $t9, 1
-        sw $t9, ($s5)
+        sw $t9, ($s7)
         li $t9, 0
-        sw $t9, 4($s5)
-        addi $s5, $s5, 8
+        sw $t9, 4($s7)
+        addi $s7, $s7, 8
         addi $s1, $s1, 1
         
     j reset_grid_odd
@@ -842,10 +842,10 @@ reset_grid_even:
         # so we're at the row $t4
         # store
         li $t9, 0
-        sw $t9, ($s5)
+        sw $t9, ($s7)
         li $t9, 1
-        sw $t9, 4($s5)
-        addi $s5, $s5, 8
+        sw $t9, 4($s7)
+        addi $s7, $s7, 8
         addi $s1, $s1, 1
 
     j reset_grid_even
@@ -857,9 +857,9 @@ shift_rows:
         li $t6, 0
         jal shift
         addi $t4, $t4, -1
-        addi $s5, $s5, -80 # get the above row values
+        addi $s7, $s7, -80 # get the above row values
         jal remove_line # directly modifies $t8 must reset $t8 value
-        addi $s5, $s5, -40 # get the above row values
+        addi $s7, $s7, -40 # get the above row values
     j shift_rows
 
 shift:
@@ -867,14 +867,14 @@ shift:
     beq $t6, 40, END 
         # shift down
 
-        addi $s5, $s5, 4 # shift to get next column
-        addi $s5, $s5, -40 # get the above row values
-        lw $t9 ($s5) # load the values into t9
-        addi $s5, $s5, 40 # set up where we are going to put it on the next row
+        addi $s7, $s7, 4 # shift to get next column
+        addi $s7, $s7, -40 # get the above row values
+        lw $t9 ($s7) # load the values into t9
+        addi $s7, $s7, 40 # set up where we are going to put it on the next row
         addi $t6, $t6, 4 # go to the next item in row
         ble $t9, 1, shift # if the block isnt colored, attempt to shift the next item on the row
         subiu $t6, $t6, 4 # go to the next item in row
-        sw $t9, ($s5) # store the values from t9 onto this row
+        sw $t9, ($s7) # store the values from t9 onto this row
         addi $t6, $t6, 4 # go to the next item in row
         
     j shift 
@@ -1146,7 +1146,7 @@ place_block:
     li $t5, 1
     sw $t5, ($s2)
     # before i place the block i must check the sides and see if i need to move it
-
+    
         
     # update blocks in the grid
     jal update_state_grid
