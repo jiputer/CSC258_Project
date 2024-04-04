@@ -78,6 +78,8 @@ CURRENT_KEY:
 BLOCK_POSITION:
     .word 0:4
 
+PAUSE:
+    .word 0
 # 1 unit is an integer of 4 spaces, this value swtiches between 0 and 4.
 VELOCITY:
     .word 1
@@ -1031,7 +1033,7 @@ check_on_block_loop:
 
         
         lw $t8, CURRENT_KEY
-        beq $t8, 0x73, check_bottom
+        jal check_bottom
         
         # check if t6 is 0 or not; because if it there is that means we're at the top border
         lw $t7 ($t6)
@@ -1485,15 +1487,37 @@ tick:
     addi $sp, $sp, -4
     sw $ra, ($sp)
     
+    jal gravity
+    
     li $v0, 32 # syscall for sleep
     li $a0, 100 # 100 millisecond sleep = 10 frames per second
     syscall 
-
-    # gravity
     
+    
+
     # pop
     j END_AND_POP
 
+gravity:
+    # gravity
+    la $t0, BLOCK_POSITION
+    lw $t1, ($t0)
+    addi $t1, $t1, 128
+    sw $t1, ($t0)
+    
+    lw $t1, 4($t0)
+    addi $t1, $t1, 128
+    sw $t1, 4($t0)
+    
+    lw $t1, 8($t0)
+    addi $t1, $t1, 128
+    sw $t1, 8($t0)
+    
+    lw $t1, 12($t0)
+    addi $t1, $t1, 128
+    sw $t1, 12($t0)
+    
+    j END
 ## END FUNCTIONALITIES FOR LOOPS##
 
 END_AND_POP: 
