@@ -5,7 +5,7 @@
 # Student 2: Zixin Zeng, 1008929885
 ######################## Bitmap Display Configuration ########################
 # - Unit width in pixels:       8
-# - Unit height in pixels:      8
+# - Unit height in pixels:      4
 # - Display width in pixels:    256
 # - Display height in pixels:   256
 # - Base Address for Display:   0x10008000 ($gp)
@@ -55,6 +55,14 @@ GRID_END:
 GRID_WIDTH:
     .word 40 # width of the grid, in how many memory space it takes, 10 blocks in width 
     
+# Notes and rests for the music
+
+NOTES:
+.word 66, 0, 61, 62, 64, 0, 62, 61, 59, 0, 59, 62, 66, 0, 64, 62, 61, 0, 0, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 0, 64, 0, 67, 71, 0, 69, 67, 66, 0, 0, 62, 66, 0, 64, 62, 61, 0, 61, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 66, 0, 61, 62, 64, 0, 62, 61, 59, 0, 59, 62, 66, 0, 64, 62, 61, 0, 0, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 0, 64, 0, 67, 71, 0, 69, 67, 66, 0, 0, 62, 66, 0, 64, 62, 61, 0, 61, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 66, 0, 0, 0, 62, 0, 0, 0, 64, 0, 0, 0, 61, 0, 0, 0, 62, 0, 0, 0, 59, 0, 0, 0, 58, 0, 0, 0, 61, 0, 0, 0, 66, 0, 0, 0, 62, 0, 0, 0, 64, 0, 0, 0, 61, 0, 0, 0, 62, 0, 66, 0, 71, 0, 0, 0, 70, 0, 0, 0, 0, 0, 0, 0
+
+
+VOLUME: 
+.word 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 0, 100, 0, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 0, 100, 0, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0
 
 
 ##############################################################################s
@@ -78,8 +86,6 @@ CURRENT_KEY:
 BLOCK_POSITION:
     .word 0:4
 
-PAUSE:
-    .word 0
 # 1 unit is an integer of 4 spaces, this value swtiches between 0 and 4.
 VELOCITY:
     .word 1
@@ -102,7 +108,12 @@ main:
     syscall
     addi $a0, $a0, 2
     sw $a0, ($t4)     # set the block shape
-
+    
+    # set up music stored values:
+    li $s4, 0
+    li $s5, 192
+    li $s6, 1
+    
     jal init_new_shape
     jal draw_border # set border
     jal set_grid  #setup the grid
@@ -1033,7 +1044,7 @@ check_on_block_loop:
 
         
         lw $t8, CURRENT_KEY
-        jal check_bottom
+        beq $t8, 0x73, check_bottom
         
         # check if t6 is 0 or not; because if it there is that means we're at the top border
         lw $t7 ($t6)
@@ -1487,37 +1498,48 @@ tick:
     addi $sp, $sp, -4
     sw $ra, ($sp)
     
-    jal gravity
+    la $t0, NOTES
+    la $t1, VOLUME
     
+    
+    MUSIC: 
+    sll $t2, $s4, 2
+    add $t3, $t2, $t0
+    add $t4, $t2, $t1
+    li $v0, 31
+    lw $a0, 0($t3)
+    lw $a3, 0($t4)
+    li $a1, 100
+    li $a2, 0
+    beq $s6, $zero, SKIP
+    syscall
+    li $s6, 0
     li $v0, 32 # syscall for sleep
     li $a0, 100 # 100 millisecond sleep = 10 frames per second
     syscall 
-    
-    
+
+
+    # gravity
+
+    addi $s4, $s4, 1
+    beq $s4, $s5,  RESET
 
     # pop
     j END_AND_POP
+    
+RESET:
+    li $s4, 0
+    j END_AND_POP
+    
+SKIP:
+    li $s6, 1
+    li $v0, 32 # syscall for sleep
+    li $a0, 100 # 100 millisecond sleep = 10 frames per second
+    syscall
+    j END_AND_POP
 
-gravity:
-    # gravity
-    la $t0, BLOCK_POSITION
-    lw $t1, ($t0)
-    addi $t1, $t1, 128
-    sw $t1, ($t0)
     
-    lw $t1, 4($t0)
-    addi $t1, $t1, 128
-    sw $t1, 4($t0)
-    
-    lw $t1, 8($t0)
-    addi $t1, $t1, 128
-    sw $t1, 8($t0)
-    
-    lw $t1, 12($t0)
-    addi $t1, $t1, 128
-    sw $t1, 12($t0)
-    
-    j END
+
 ## END FUNCTIONALITIES FOR LOOPS##
 
 END_AND_POP: 
