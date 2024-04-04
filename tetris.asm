@@ -23,6 +23,8 @@ ADDR_KBRD:
     .word 0xffff0000
 
 # Set grid colors
+BLACK:
+    .word 0x000000
 LIGHT_GRAY:
     .word 0x454545
 DARK_GRAY:
@@ -49,13 +51,14 @@ INDIGO:
 
 # Set grid start and end dimensions
 GRID_START:
-    .word 904 # offset from display address of where to start the grid
+    .word 3592 # offset from display address of where to start the grid
 GRID_END:
-    .word 3376 # 904 + 128*19 + 40 ;  offset from display address to end grid
+    .word 6064 # 3592 + 128*19 + 40 ;  offset from display address to end grid
 GRID_WIDTH:
     .word 40 # width of the grid, in how many memory space it takes, 10 blocks in width 
+
     
-# Notes and rests for the music
+# Notes and rests for the musics
 
 NOTES:
 .word 66, 0, 61, 62, 64, 0, 62, 61, 59, 0, 59, 62, 66, 0, 64, 62, 61, 0, 0, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 0, 64, 0, 67, 71, 0, 69, 67, 66, 0, 0, 62, 66, 0, 64, 62, 61, 0, 61, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 66, 0, 61, 62, 64, 0, 62, 61, 59, 0, 59, 62, 66, 0, 64, 62, 61, 0, 0, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 0, 64, 0, 67, 71, 0, 69, 67, 66, 0, 0, 62, 66, 0, 64, 62, 61, 0, 61, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 66, 0, 0, 0, 62, 0, 0, 0, 64, 0, 0, 0, 61, 0, 0, 0, 62, 0, 0, 0, 59, 0, 0, 0, 58, 0, 0, 0, 61, 0, 0, 0, 66, 0, 0, 0, 62, 0, 0, 0, 64, 0, 0, 0, 61, 0, 0, 0, 62, 0, 66, 0, 71, 0, 0, 0, 70, 0, 0, 0, 0, 0, 0, 0
@@ -64,6 +67,10 @@ NOTES:
 VOLUME: 
 .word 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 0, 100, 0, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 0, 100, 0, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0
 
+# Score position
+
+SCORE_POS:
+    .word 1168
 
 ##############################################################################s
 # Mutable Data
@@ -90,6 +97,10 @@ BLOCK_POSITION:
 VELOCITY:
     .word 1
 
+SCORE: 
+  .word 216
+  
+
 ##############################################################################
 # Code
 ##############################################################################
@@ -113,7 +124,7 @@ main:
     li $s4, 0
     li $s5, 192
     li $s6, 1
-    
+    jal draw_score
     jal init_new_shape
     jal draw_border # set border
     jal set_grid  #setup the grid
@@ -141,6 +152,83 @@ game_loop:
 ### INITIALIZATION FUNCTIONS ### 
 ################################
 ################################
+
+draw_score:
+
+    addi $sp, $sp, -4
+    sw $ra, ($sp)
+    
+    lw $t0, ADDR_DSPL
+    lw $t2, WHITE
+    sw $t2, 408($t0) # S in score
+    sw $t2, 404($t0)
+    sw $t2, 400($t0)
+    sw $t2, 528($t0)
+    sw $t2, 656($t0)
+    sw $t2, 660($t0)
+    sw $t2, 664($t0)
+    sw $t2, 792($t0)
+    sw $t2, 920($t0)
+    sw $t2, 916($t0)
+    sw $t2, 912($t0)
+    
+    sw $t2, 416($t0) # C in score
+    sw $t2, 420($t0)
+    sw $t2, 424($t0)
+    sw $t2, 544($t0)
+    sw $t2, 672($t0)
+    sw $t2, 800($t0)
+    sw $t2, 928($t0)
+    sw $t2, 932($t0)
+    sw $t2, 936($t0)
+    
+    sw $t2, 432($t0) # O in score
+    sw $t2, 436($t0)
+    sw $t2, 440($t0)
+    sw $t2, 560($t0)
+    sw $t2, 568($t0)
+    sw $t2, 688($t0)
+    sw $t2, 696($t0) 
+    sw $t2, 816($t0)
+    sw $t2, 824($t0)
+    sw $t2, 944($t0)
+    sw $t2, 948($t0)
+    sw $t2, 952($t0)
+    
+    sw $t2, 448($t0) # R in score
+    sw $t2, 452($t0)
+    sw $t2, 456($t0)
+    sw $t2, 576($t0)
+    sw $t2, 584($t0)
+    sw $t2, 704($t0)
+    sw $t2, 708($t0) 
+    sw $t2, 832($t0)
+    sw $t2, 840($t0)
+    sw $t2, 960($t0)
+    sw $t2, 968($t0)
+
+    sw $t2, 464($t0) # R in score
+    sw $t2, 468($t0)
+    sw $t2, 472($t0)
+    sw $t2, 592($t0)
+    sw $t2, 720($t0)
+    sw $t2, 724($t0) 
+    sw $t2, 848($t0)
+    sw $t2, 976($t0)
+    sw $t2, 980($t0)
+    sw $t2, 984($t0)
+    
+    sw $t2, 608($t0) # : in score
+    sw $t2, 864($t0)
+    
+    lw $t7, SCORE_POS
+    jal draw_0
+    addi $t7, $t7, 16
+    jal draw_0
+    addi $t7, $t7, 16
+    jal draw_0
+    
+    j END_AND_POP
 
 
 draw_border:
@@ -213,6 +301,7 @@ set_grid:
     # push to stack
     addi $sp, $sp, -4
     sw $ra, ($sp)
+    
     
     jal init_grid_loop
     
@@ -670,7 +759,202 @@ draw_z:
 
     j paint_shape
 
+# DRAWING NUMBERS
 
+draw_0:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 128($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 264($t0)
+    sw $t2, 384($t0)
+    sw $t2, 392($t0)
+    sw $t2, 512($t0)
+    sw $t2, 516($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+
+draw_1:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 8($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 264($t0)
+    sw $t2, 392($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+
+draw_2:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 260($t0)
+    sw $t2, 264($t0)
+    sw $t2, 384($t0)
+    sw $t2, 512($t0)
+    sw $t2, 516($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+    
+draw_3:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 260($t0)
+    sw $t2, 264($t0)
+    sw $t2, 392($t0)
+    sw $t2, 512($t0)
+    sw $t2, 516($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+    
+draw_4:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 8($t0)
+    sw $t2, 128($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 260($t0)
+    sw $t2, 264($t0)
+    sw $t2, 392($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+    
+draw_5:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 128($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 260($t0)
+    sw $t2, 264($t0)
+    sw $t2, 392($t0)
+    sw $t2, 512($t0)
+    sw $t2, 516($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+    
+draw_6:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 128($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 260($t0)
+    sw $t2, 264($t0)
+    sw $t2, 384($t0)
+    sw $t2, 392($t0)
+    sw $t2, 512($t0)
+    sw $t2, 516($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+    
+draw_7:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 264($t0)
+    sw $t2, 392($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+    
+draw_8:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 128($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 260($t0)
+    sw $t2, 264($t0)
+    sw $t2, 384($t0)
+    sw $t2, 392($t0)
+    sw $t2, 512($t0)
+    sw $t2, 516($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+
+draw_9:
+    lw $t2, WHITE
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 128($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 260($t0)
+    sw $t2, 264($t0)
+    sw $t2, 392($t0)
+    sw $t2, 512($t0)
+    sw $t2, 516($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
 #################################
 #################################
 ##### COLLISION FUNCTIONS #######
@@ -1195,6 +1479,7 @@ respond_to_w:
     la $t4, CURRENT_KEY
     sw $a0, ($t4)
     
+    
     # PUSH TO STACK
     addi $sp, $sp, -4
     sw $ra, ($sp)
@@ -1367,7 +1652,7 @@ tick:
     li $v0, 31
     lw $a0, 0($t3)
     lw $a3, 0($t4)
-    li $a1, 100
+    li $a1, 200
     li $a2, 0
     beq $s6, $zero, SKIP
     syscall
@@ -1377,22 +1662,82 @@ tick:
     syscall 
     addi $s4, $s4, 1
     beq $s4, $s5,  RESET
-    # pop
-    j END_AND_POP
+    j SCORE_UPDATE
     
 RESET:
     li $s4, 0
-    j END_AND_POP
+    j SCORE_UPDATE
     
 SKIP:
     li $s6, 1
     li $v0, 32 # syscall for sleep
     li $a0, 100 # 100 millisecond sleep = 10 frames per second
     syscall
+    j SCORE_UPDATE
+
+SCORE_UPDATE:
+    li $t9, 999
+    lw $t7, SCORE_POS
+    lw $t3, SCORE
+    bgt $t3, $t9, END_AND_POP
+    li $t6, 100
+    div $t3, $t6
+    mfhi $t3 #remainder
+    mflo $t5 #quotient
+    jal ERASE
+    jal CHECK_VAL
+    li $t6, 10
+    addi $t7, $t7, 16
+    div $t3, $t6
+    mfhi $t3 #remainder
+    mflo $t5 #quotient
+    jal ERASE
+    jal CHECK_VAL
+    li $t6, 1
+    addi $t7, $t7, 16
+    div $t3, $t6
+    mfhi $t3 #remainder
+    mflo $t5 #quotient
+    jal ERASE
+    jal CHECK_VAL
     j END_AND_POP
-
     
-
+    
+CHECK_VAL:
+    beq $t5, 0, draw_0
+    beq $t5, 1, draw_1
+    beq $t5, 2, draw_2
+    beq $t5, 3, draw_3
+    beq $t5, 4, draw_4
+    beq $t5, 5, draw_5
+    beq $t5, 6, draw_6
+    beq $t5, 7, draw_7
+    beq $t5, 8, draw_8
+    beq $t5, 9, draw_9
+    
+    
+ERASE:
+    lw $t2, BLACK
+    lw $t0 ADDR_DSPL
+    
+    add $t0, $t0, $t7
+    
+    sw $t2, 0($t0) 
+    sw $t2, 4($t0)
+    sw $t2, 8($t0)
+    sw $t2, 128($t0)
+    sw $t2, 136($t0) 
+    sw $t2, 256($t0)
+    sw $t2, 260($t0)
+    sw $t2, 264($t0)
+    sw $t2, 384($t0)
+    sw $t2, 392($t0)
+    sw $t2, 512($t0)
+    sw $t2, 516($t0)
+    sw $t2, 520($t0)
+    
+    jr $ra
+    
 ## END FUNCTIONALITIES FOR LOOPS##
 
 END_AND_POP: 
