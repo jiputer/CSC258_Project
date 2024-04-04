@@ -956,8 +956,6 @@ draw_9:
 
 ## COLLISION CHECK FUNCTION ##
 generate_tetronimo:
-    
-
     # randomize what shape to draw
     li $v0 42
     li $a1 7
@@ -1069,6 +1067,7 @@ clear_line:
     lw $t9, ($t4)
     addi $t9, $t9, 1
     sw $t9, ($t4)
+    bge $t9, 999, END_GAME
 
     
     li $t9 40
