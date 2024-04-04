@@ -5,7 +5,7 @@
 # Student 2: Zixin Zeng, 1008929885
 ######################## Bitmap Display Configuration ########################
 # - Unit width in pixels:       8
-# - Unit height in pixels:      4
+# - Unit height in pixels:      8
 # - Display width in pixels:    256
 # - Display height in pixels:   256
 # - Base Address for Display:   0x10008000 ($gp)
@@ -54,7 +54,6 @@ GRID_START:
     .word 3592 # offset from display address of where to start the grid
 GRID_END:
     .word 6064 # 3592 + 128*19 + 40 ;  offset from display address to end grid
-
 GRID_WIDTH:
     .word 40 # width of the grid, in how many memory space it takes, 10 blocks in width 
 
@@ -129,7 +128,7 @@ main:
     jal init_new_shape
     jal draw_border # set border
     jal set_grid  #setup the grid
-    
+
     j game_loop
 
 game_loop:
@@ -262,7 +261,10 @@ draw_border:
         
     
     # pop stack
-    j END_AND_POP
+    lw $ra, ($sp)
+    addi $sp, $sp, 4
+    
+    jr $ra
     
 
 draw_border_vertical:
@@ -567,8 +569,8 @@ draw:
     lw $t1 BLOCK_POSITION
     
     # set up grid start as a value on the addr_displ
-    lw $s6, GRID_START
-    add $s6, $s6, $t0 # where the grid starts at
+    lw $t6, GRID_START
+    add $t6, $t6, $t0
     
     # set the block position
     la $t1 BLOCK_POSITION # offset of the block_position
@@ -578,25 +580,23 @@ draw:
 
     # if 1, then initialize a new shape
     beq $t4, 1, new_shape # initialize the shape
-    
-    j paint_shape
+
 
 paint_shape:
-
     lw $t5, 0($t1) # load block position
-    add $t8, $s6, $t5  # add to the offset
+    add $t8, $t6, $t5  # add to the offset
     sw $s3, ($t8) # draw here
     
     lw $t5, 4($t1) # load block position
-    add $t8, $s6, $t5  # add to the offset
+    add $t8, $t6, $t5  # add to the offset
     sw $s3, ($t8)
     
     lw $t5, 8($t1)
-    add $t8, $s6, $t5 
+    add $t8, $t6, $t5 
     sw $s3, ($t8)
     
     lw $t5, 12($t1)
-    add $t8, $s6, $t5 
+    add $t8, $t6, $t5 
     sw $s3, ($t8)
     
     # pop stack
@@ -978,9 +978,8 @@ collision:
     addi $sp, $sp, -4
     sw $ra, ($sp)
     
-    
+
     la $t0, BLOCK_POSITION
-    jal check_top
 
     li $t2 , 0 #initiate iterate counter
     li $t3, -4 #left side count
@@ -994,175 +993,35 @@ collision:
     # t2 to t8
     jal check_bottom_border # if landed on
     
-    li $t1, 20 # counter to check a row
-    li $t2 , 0 #
-    li $t3, 0 # row
-    li $t4, 0
-    la $s0, GRID_STATE
-    addi $t5, $s0, 0
+    li $t2 , 0 # intiate iterate counter
+    li $t3, 0 # counts how many values greater than 2
+    li $t4, 0 # the number of rows
+    la $t5, GRID_STATE
+
     jal check_clear_line
-
-check_top:
-    lw $t2, GRID_START
-    lw $t1, ($t0)
-    add $t1, $t1, $t2
-    ble $t1, $t2, push_down
-    lw $t1, 4($t0)
-    add $t1, $t1, $t2
-    ble $t1, $t2, push_down
-    lw $t1, 8($t0)
-    add $t1, $t1, $t2
-    ble $t1, $t2, push_down
-    lw $t1, 12($t0)
-    add $t1, $t1, $t2
-    ble $t1, $t2, push_down
-    j END
-    
-
-# if we rotate something out of bounds we push it down
-push_down:
-    lw $t1, ($t0)
-    add $t1, $t1, 256
-    sw $t1, 0($t0)
-    
-    lw $t1, 4($t0)
-    add $t1, $t1, 256
-    sw $t1, 4($t0)
-    
-    lw $t1, 8($t0)
-    add $t1, $t1, 256
-    sw $t1, 8($t0)
-    
-    lw $t1, 12($t0)
-    add $t1, $t1, 256
-    sw $t1, 12($t0)
-    j END
+    # pop stack
+    j END_AND_POP
 
 check_clear_line:
-    addi $t1, $t1, -1
-    ble $t1, -1, END_AND_POP
-        li $t2, 0
-        li $t4, 40
-        mul $t4, $t1, $t4
-        add $t5, $s0, $t4 
+    beq $t4, 20, END_AND_POP
+        li $t3, 0
         jal check_row_line
-
-        
-        
+        addi $t4, $t4, 1
     j check_clear_line
     
 check_row_line:
-    beq $t2, 10, clear_line # if all pixels on the row is coloured then...
-        lw $t3, ($t5) 
-        beq $t3, 1, END # if a pixel on the row is not colored break
-        beq $t3, 0, END # if a pixel on the row is not colored break
-        addi  $t5, $t5, 4
+    beq $t2, 10, END
+        lw $t6, ($t5)
+        bge $t6, 2, line
         addi $t2, $t2, 1
-        
+        addi $t5, $t5, 4
+
+line:
+    addi $t3, $t3, 1
     j check_row_line
-
-clear_line:
-    # we can use t4, t6, t7, t8, t9
-    # so we should know what values we're at 
-    # t1  is whatever row we're on
-    # t2 is a counter
-    
-    # add to the points systems
-    # la $t4, SCORE
-    # lw $t6, ($t4)
-    # addi $t6, $t6, 1
-    # sw $t6, ($t4)
-    # bge $t6, 999, END_GAME
-    
-    li $t9 40
-    mul $t4, $t9, $t1 # the offset -- how many rows we're down
-    add $s5, $s0, $t4 # the grid address to start at
-    addi $t4, $t1, 0
-    jal remove_line # remove the line
-   
-    li $t9 40
-    mul $t4, $t9, $t1 # the offset -- how many rows we're down
-    add $s5, $s0, $t4 # the grid address to start at
-    addi $t4, $t1, 0
-    jal shift_rows # shift lines down
     
     
-    j check_clear_line # go back 
-
-remove_line:
-
-    # if even ->  0 1
-    # if odd ->  1 0
-    li $t7 2
-    div $t4, $t7 # to see if the row is even or odd
-    mfhi $t7
-
-    li $s4, 0 # set iterator
-    beq $t7, 0, reset_grid_even # even
-    bne $t7, 0, reset_grid_odd # odd
-
-reset_grid_odd:
-    # set this to 101010 for the line
-    # t5 is grid state
-    # t2 tells us what row we're on
-    beq $s4, 5, END
-        # so we're at the row $t4
-        li $t9, 1
-        sw $t9, ($s5)
-        li $t9, 0
-        sw $t9, 4($s5)
-        addi $s5, $s5, 8
-        addi $s4, $s4, 1
-        
-    j reset_grid_odd
-
-reset_grid_even:
-    # set this to 01 01 01 for the line
-    # t2 tells us what row we're on
-    beq $s4, 5, END
-        # so we're at the row $t4
-        # store
-        li $t9, 0
-        sw $t9, ($s5)
-        li $t9, 1
-        sw $t9, 4($s5)
-        addi $s5, $s5, 8
-        addi $s4, $s4, 1
-
-    j reset_grid_even
-
-# when shifting rows start from the clear and go up
-shift_rows:
-    # t4 is what row we've cleared 
-    ble $t4, 0, check_clear_line # go back when we're done here
-        li $t6, 0
-        jal shift
-        addi $t4, $t4, -1
-        addi $s5, $s5, -80 # get the above row values
-        jal remove_line # directly modifies $t8 must reset $t8 value
-        addi $s5, $s5, -40 # get the above row values
-    j shift_rows
-
-shift:
-    #values here get put in 
-    beq $t6, 40, END 
-        # shift down
-
-        addi $s5, $s5, 4 # shift to get next column
-        addi $s5, $s5, -40 # get the above row values
-        lw $t9 ($s5) # load the values into t9
-        addi $s5, $s5, 40 # set up where we are going to put it on the next row
-        addi $t6, $t6, 4 # go to the next item in row
-        ble $t9, 1, shift # if the block isnt colored, attempt to shift the next item on the row
-        subiu $t6, $t6, 4 # go to the next item in row
-        sw $t9, ($s5) # store the values from t9 onto this row
-        addi $t6, $t6, 4 # go to the next item in row
-        
-    j shift 
-        
-########################################################################################################################################################################        
-########################################################################################################################################################################    
-########################################################################################################################################################################    
+    
 
 check_left_border:
 
@@ -1276,7 +1135,6 @@ check_bottom_border:
 
 bottom_border_detected:
     ## push it back up
-    
     la $t5, BLOCK_POSITION
     lw $t6, ($t5)
     addi $t6, $t6, -128
@@ -1301,7 +1159,6 @@ check_collision_block:
     # if there is a block underneath another block
     # t0, t1 are not free to use
     
-    # load and store 
     
     # push to stack
     addi $sp, $sp, -4
@@ -1350,12 +1207,14 @@ check_bottom:
     j check_on_block_loop
     
 check_left:
+    addi $t6, $t6, -4
     lw $t7 ($t6)
     bge $t7, 2, push_right_block
     addi $t6, $t6, 4
     j check_on_block_loop
 
 check_right:
+    addi $t6, $t6, 4
     lw $t7 ($t6)
     bge $t7, 2, push_left_block
     j check_on_block_loop
@@ -1407,9 +1266,9 @@ push_left_block:
 
 place_block:
     # signal to create a new shape
-    la $s6, NEW_SHAPE_FLAG
+    la $t4, NEW_SHAPE_FLAG
     li $t5, 1
-    sw $t5, ($s6)
+    sw $t5, ($t4)
     # update blocks in the grid
     jal update_state_grid
     # since we need to place a block, we need to generate a new tetronimo
@@ -1656,8 +1515,6 @@ block_rotate:
     
     # $t7 = px, $t8 = py
     
-    # No loop here just to 
-    # put this all under this label 
     ###############################
     lw $t5, 4($t3)
     div $t5, $t6
@@ -1803,14 +1660,9 @@ tick:
     li $v0, 32 # syscall for sleep
     li $a0, 100 # 100 millisecond sleep = 10 frames per second
     syscall 
-
-
-    # gravity
-
     addi $s4, $s4, 1
-    beq $s4, $s5,  RESET
+    beq $s4, 162,  RESET
     j SCORE_UPDATE
-
     
 RESET:
     li $s4, 0
