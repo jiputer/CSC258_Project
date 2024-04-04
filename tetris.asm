@@ -1081,7 +1081,7 @@ clear_line:
     mul $t4, $t9, $t1 # the offset -- how many rows we're down
     add $s7, $s0, $t4 # the grid address to start at
     addi $t4, $t1, 0
-    addi $t1, $t1, 1
+
     jal shift_rows # shift lines down
     
     j check_clear_line # go back 
@@ -1133,11 +1133,15 @@ shift_rows:
     # t4 is what row we've cleared 
     ble $t4, 0, check_clear_line # go back when we're done here
         li $t6, 0
+        addi $s7, $s7, -4 # shift to get next column
         jal shift
         addi $t4, $t4, -1
-        addi $s7, $s7, -80 # get the above row values
+        # $s7 is our currently stored values
+        addi $s7, $s7, -76 # get the above row values
         jal remove_line # directly modifies $t8 must reset $t8 value
         addi $s7, $s7, -40 # get the above row values
+
+
     j shift_rows
 
 shift:
@@ -1153,6 +1157,7 @@ shift:
         ble $t9, 1, shift # if the block isnt colored, attempt to shift the next item on the row
         subiu $t6, $t6, 4 # go to the next item in row
         sw $t9, ($s7) # store the values from t9 onto this row
+        
         addi $t6, $t6, 4 # go to the next item in row
         
     j shift 
@@ -1793,7 +1798,7 @@ tick:
     sw $ra, ($sp)
     
 
-    jal gravity
+
     
     la $t0, NOTES
     la $t1, VOLUME
@@ -1828,6 +1833,7 @@ RESET:
     j SCORE_UPDATE
     
 SKIP:
+    jal gravity
     li $s6, 1
     li $v0, 32 # syscall for sleep
     li $a0, 100 # 100 millisecond sleep = 10 frames per second
