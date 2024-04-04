@@ -513,7 +513,7 @@ init_draw_z:
 draw_grid:
     lw $t0, ADDR_DSPL
     # load a color based on the pixel
-    li $s0 0
+
     #intiate where we will put the grid
     lw $t1 GRID_START
     lw $t2 GRID_END
@@ -569,8 +569,10 @@ draw:
     lw $t1 BLOCK_POSITION
     
     # set up grid start as a value on the addr_displ
-    lw $t6, GRID_START
-    add $t6, $t6, $t0
+
+    lw $s2, GRID_START
+    add $s2, $s2, $t0 # where the grid starts at
+
     
     # set the block position
     la $t1 BLOCK_POSITION # offset of the block_position
@@ -584,19 +586,21 @@ draw:
 
 paint_shape:
     lw $t5, 0($t1) # load block position
-    add $t8, $t6, $t5  # add to the offset
+
+    add $t8, $s2, $t5  # add to the offset
     sw $s3, ($t8) # draw here
     
     lw $t5, 4($t1) # load block position
-    add $t8, $t6, $t5  # add to the offset
+    add $t8, $s2, $t5  # add to the offset
     sw $s3, ($t8)
     
     lw $t5, 8($t1)
-    add $t8, $t6, $t5 
+    add $t8, $s2, $t5 
     sw $s3, ($t8)
     
     lw $t5, 12($t1)
-    add $t8, $t6, $t5 
+    add $t8, $s2, $t5 
+
     sw $s3, ($t8)
     
     # pop stack
@@ -963,6 +967,8 @@ draw_9:
 
 ## COLLISION CHECK FUNCTION ##
 generate_tetronimo:
+    
+
     # randomize what shape to draw
     li $v0 42
     li $a1 7
@@ -983,6 +989,8 @@ collision:
 
     li $t2 , 0 #initiate iterate counter
     li $t3, -4 #left side count
+    
+    
     jal check_left_border
     
     li $t2 , 0 #intiate iterate counter
@@ -1022,6 +1030,109 @@ line:
     
     
     
+
+clear_line:
+    # we can use t4, t6, t7, t8, t9
+    # so we should know what values we're at 
+    # t1  is whatever row we're on
+    # t2 is a counter
+    
+    # add to the points systems
+    # la $t4, SCORE
+    # lw $t6, ($t4)
+    # addi $t6, $t6, 1
+    # sw $t6, ($t4)
+    # bge $t6, 999, END_GAME
+    
+    li $t9 40
+    mul $t4, $t9, $t1 # the offset -- how many rows we're down
+    add $s5, $s0, $t4 # the grid address to start at
+    addi $t4, $t1, 0
+    jal remove_line # remove the line
+   
+    li $t9 40
+    mul $t4, $t9, $t1 # the offset -- how many rows we're down
+    add $s5, $s0, $t4 # the grid address to start at
+    addi $t4, $t1, 0
+    jal shift_rows # shift lines down
+    
+    
+    j check_clear_line # go back 
+
+remove_line:
+
+    # if even ->  0 1
+    # if odd ->  1 0
+    li $t7 2
+    div $t4, $t7 # to see if the row is even or odd
+    mfhi $t7
+
+    li $s1, 0 # set iterator
+    beq $t7, 0, reset_grid_even # even
+    bne $t7, 0, reset_grid_odd # odd
+
+reset_grid_odd:
+    # set this to 101010 for the line
+    # t5 is grid state
+    # t2 tells us what row we're on
+    beq $s1, 5, END
+        # so we're at the row $t4
+        li $t9, 1
+        sw $t9, ($s5)
+        li $t9, 0
+        sw $t9, 4($s5)
+        addi $s5, $s5, 8
+        addi $s1, $s1, 1
+        
+    j reset_grid_odd
+
+reset_grid_even:
+    # set this to 01 01 01 for the line
+    # t2 tells us what row we're on
+    beq $s1, 5, END
+        # so we're at the row $t4
+        # store
+        li $t9, 0
+        sw $t9, ($s5)
+        li $t9, 1
+        sw $t9, 4($s5)
+        addi $s5, $s5, 8
+        addi $s1, $s1, 1
+
+    j reset_grid_even
+
+# when shifting rows start from the clear and go up
+shift_rows:
+    # t4 is what row we've cleared 
+    ble $t4, 0, check_clear_line # go back when we're done here
+        li $t6, 0
+        jal shift
+        addi $t4, $t4, -1
+        addi $s5, $s5, -80 # get the above row values
+        jal remove_line # directly modifies $t8 must reset $t8 value
+        addi $s5, $s5, -40 # get the above row values
+    j shift_rows
+
+shift:
+    #values here get put in 
+    beq $t6, 40, END 
+        # shift down
+
+        addi $s5, $s5, 4 # shift to get next column
+        addi $s5, $s5, -40 # get the above row values
+        lw $t9 ($s5) # load the values into t9
+        addi $s5, $s5, 40 # set up where we are going to put it on the next row
+        addi $t6, $t6, 4 # go to the next item in row
+        ble $t9, 1, shift # if the block isnt colored, attempt to shift the next item on the row
+        subiu $t6, $t6, 4 # go to the next item in row
+        sw $t9, ($s5) # store the values from t9 onto this row
+        addi $t6, $t6, 4 # go to the next item in row
+        
+    j shift 
+        
+########################################################################################################################################################################        
+########################################################################################################################################################################    
+########################################################################################################################################################################    
 
 check_left_border:
 
@@ -1134,22 +1245,35 @@ check_bottom_border:
     
 
 bottom_border_detected:
+
+
+    ## if current key has been pressed
+    ## double these values instead
+    li $t9, 128
+    # lw $t1, CURRENT_KEY
+    # bne $t1, 0x73, next_bottom_border_detected
+    # li $t1, 2
+    # mul $t9, $t1, 128
     ## push it back up
+
+    #next_bottom_border_detected:
+
+
     la $t5, BLOCK_POSITION
     lw $t6, ($t5)
-    addi $t6, $t6, -128
+    subu $t6, $t6, $t9
     sw $t6, ($t5)
     
     lw $t6, 4($t5)
-    addi $t6, $t6, -128
+    subu $t6, $t6, $t9
     sw $t6, 4($t5)
 
     lw $t6, 8($t5)
-    addi $t6, $t6, -128
+    subu $t6, $t6, $t9
     sw $t6, 8($t5)
     
     lw $t6, 12($t5)
-    addi $t6, $t6, -128
+    subu $t6, $t6, $t9
     sw $t6, 12($t5)
     j place_block
 
@@ -1175,70 +1299,73 @@ check_collision_block:
     j END_AND_POP
 
 
-check_on_block_loop:
+check_on_block_loop: # each loop gets a brick of the shape
     beq $s0, 4, END_AND_POP
         addi $s0, $s0, 1
         addi $t5, $t5, 4 
         
         lw $t6, ($t5) # get the position of the block
-        jal convert_position_to_grid # convert it to a value onto the memory address
+        jal convert_position_to_grid # puts the position of the block on the grid into t6
         # if there is a block on left...
 
-        
+        jal check_bottom 
         lw $t8, CURRENT_KEY
-        beq $t8, 0x73, check_bottom
-        
+        beq $t8, 0x61, check_left # pressed left
+        beq $t8, 0x64, check_right # pressed right
+
+        #beq $t8, 0x73, check_bottom_key_pressed
         # check if t6 is 0 or not; because if it there is that means we're at the top border
-        lw $t7 ($t6)
-        beq $t7, 0, check_on_block_loop
-        
-        beq $t8, 0x61, check_left
-        beq $t8, 0x64, check_right
-        
-    
+            
     j check_on_block_loop
 
 check_bottom:
-    # if there is a block on bottom...
+    # if there is a placed brick on bottom of a brick
+
     addi $t6, $t6, 40
-    lw $t7 ($t6) 
+    lw $t7 ($t6)
     bge $t7, 2, place_block
     addi $t6, $t6, -40
-    j check_on_block_loop
-    
+    j END
+
+
 check_left:
-    addi $t6, $t6, -4
-    lw $t7 ($t6)
+
+    lw $t7 ($t6) # if there is value here greater than or equal to 2, we know that we must push the block
+
     bge $t7, 2, push_right_block
-    addi $t6, $t6, 4
+
+    # if new shape that means we are placing the block
     j check_on_block_loop
 
 check_right:
     addi $t6, $t6, 4
     lw $t7 ($t6)
     bge $t7, 2, push_left_block
+    
     j check_on_block_loop
 
 push_right_block:
     li $a0 888
     li $v0, 1                       # ask system to print $a0
     syscall
+
+    la $t5, BLOCK_POSITION
     
-    lw $t1, 0($t0)
-    addi $t1, $t1, 4
-    sw $t1, ($t0)
+    lw $t9, 0($t5)
+    addi $t9, $t9, 4
+    sw $t9, ($t5)
     
-    lw $t1, 4($t0)
-    addi $t1, $t1, 4
-    sw $t1, 4($t0)
+    lw $t9, 4($t5)
+    addi $t9, $t9, 4
+    sw $t9, 4($t5)
     
-    lw $t1, 8($t0)
-    addi $t1, $t1, 4
-    sw $t1, 8($t0)
+    lw $t9, 8($t5)
+    addi $t9, $t9, 4
+    sw $t9, 8($t5)
     
-    lw $t1, 12($t0)
-    addi $t1, $t1, 4
-    sw $t1, 12($t0)
+    lw $t9, 12($t5)
+    addi $t9, $t9, 4
+    sw $t9, 12($t5)
     j check_on_block_loop
     
 push_left_block:
@@ -1246,29 +1373,36 @@ push_left_block:
     li $v0, 1                       # ask system to print $a0
     syscall
     
-    lw $t1, 0($t0)
-    addi $t1, $t1, -4
-    sw $t1, ($t0)
+
+    la $t5, BLOCK_POSITION
     
-    lw $t1, 4($t0)
-    addi $t1, $t1, -4
-    sw $t1, 4($t0)
+    lw $t9, 0($t5)
+    addi $t9, $t9, -4
+    sw $t9, ($t5)
     
-    lw $t1, 8($t0)
-    addi $t1, $t1, -4
-    sw $t1, 8($t0)
+    lw $t9, 4($t5)
+    addi $t9, $t9, -4
+    sw $t9, 4($t5)
     
-    lw $t1, 12($t0)
-    addi $t1, $t1, -4
-    sw $t1, 12($t0)
+    lw $t9, 8($t5)
+    addi $t9, $t9, -4
+    sw $t9, 8($t5)
+    
+    lw $t9, 12($t5)
+    addi $t9, $t9, -4
+    sw $t9, 12($t5)
     
     j check_on_block_loop
 
 place_block:
+
     # signal to create a new shape
-    la $t4, NEW_SHAPE_FLAG
+
+    la $s2, NEW_SHAPE_FLAG
     li $t5, 1
-    sw $t5, ($t4)
+    sw $t5, ($s2)
+    # before i place the block i must check the sides and see if i need to move it
+
     # update blocks in the grid
     jal update_state_grid
     # since we need to place a block, we need to generate a new tetronimo
@@ -1331,7 +1465,7 @@ convert_position_to_grid:
     add $t6, $t6, $t4 
 
 
-    jr $ra
+    j END
 
 #################################
 #################################
@@ -1363,15 +1497,13 @@ keyboard_input:                     # A key is pressed
 # move left
 respond_to_A:
     li $t5, 0
-    lw $t6, VELOCITY
-    beq $t5, $t6, END # dont move if velocity = 0
-    
+    lw $t4 CURRENT_KEY
+
+    # if velocity 0 and last one is not a => change velocity back to 1
     la $t3, BLOCK_POSITION
     
     la $t4, CURRENT_KEY
     sw $a0, ($t4)
-    
-
     
     lw $t4, 0($t3)
     addi $t4, $t4, -4
@@ -1402,8 +1534,6 @@ respond_to_A:
 # move right
 respond_to_D:
     li $t5, 0
-    lw $t6, VELOCITY
-    beq $t5, $t6, END # dont move if velocity = 0
     
     la $t3, BLOCK_POSITION
     
@@ -1440,8 +1570,6 @@ respond_to_D:
 # move down
 respond_to_S:
     li $t5, 0
-    lw $t6, VELOCITY
-    beq $t5, $t6, END # dont move if velocity = 0
     la $t3, BLOCK_POSITION
     
     la $t4, CURRENT_KEY
@@ -1475,9 +1603,8 @@ respond_to_S:
 
 respond_to_w:
     la $t3, BLOCK_POSITION
-    
     la $t4, CURRENT_KEY
-    sw $a0, ($t4)
+    sw $a0, ($t4)  
     
     
     # PUSH TO STACK
@@ -1641,6 +1768,9 @@ tick:
     addi $sp, $sp, -4
     sw $ra, ($sp)
     
+
+    jal gravity
+    
     la $t0, NOTES
     la $t1, VOLUME
     
@@ -1661,8 +1791,13 @@ tick:
     li $a0, 100 # 100 millisecond sleep = 10 frames per second
     syscall 
     addi $s4, $s4, 1
+
     beq $s4, 162,  RESET
     j SCORE_UPDATE
+
+
+    # pop
+    j END_AND_POP
     
 RESET:
     li $s4, 0
@@ -1701,6 +1836,28 @@ SCORE_UPDATE:
     jal ERASE
     jal CHECK_VAL
     j END_AND_POP
+
+
+gravity:
+    la $t0, BLOCK_POSITION
+    lw $t1, ($t0)
+    addi $t1, $t1, 128
+    sw $t1, ($t0)
+    
+    lw $t1, 4($t0)
+    addi $t1, $t1, 128
+    sw $t1, 4($t0)
+    
+    lw $t1, 8($t0)
+    addi $t1, $t1, 128
+    sw $t1, 8($t0)
+    
+    lw $t1, 12($t0)
+    addi $t1, $t1, 128
+    sw $t1, 12($t0)
+    
+    j END
+
     
     
 CHECK_VAL:
