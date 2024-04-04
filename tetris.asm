@@ -22,9 +22,9 @@ ADDR_DSPL:
 ADDR_KBRD:
     .word 0xffff0000
 
-# Set grid colors
 BLACK:
     .word 0x000000
+# Set grid colors
 LIGHT_GRAY:
     .word 0x454545
 DARK_GRAY:
@@ -53,12 +53,11 @@ INDIGO:
 GRID_START:
     .word 3592 # offset from display address of where to start the grid
 GRID_END:
-    .word 6064 # 3592 + 128*19 + 40 ;  offset from display address to end grid
+    .word 6064 # 3600 + 128*19 + 40 ;  offset from display address to end grid
 GRID_WIDTH:
     .word 40 # width of the grid, in how many memory space it takes, 10 blocks in width 
-
     
-# Notes and rests for the musics
+# Notes and rests for the music
 
 NOTES:
 .word 66, 0, 61, 62, 64, 0, 62, 61, 59, 0, 59, 62, 66, 0, 64, 62, 61, 0, 0, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 0, 64, 0, 67, 71, 0, 69, 67, 66, 0, 0, 62, 66, 0, 64, 62, 61, 0, 61, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 66, 0, 61, 62, 64, 0, 62, 61, 59, 0, 59, 62, 66, 0, 64, 62, 61, 0, 0, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 0, 64, 0, 67, 71, 0, 69, 67, 66, 0, 0, 62, 66, 0, 64, 62, 61, 0, 61, 62, 64, 0, 66, 0, 62, 0, 59, 0, 59, 0, 0, 0, 66, 0, 0, 0, 62, 0, 0, 0, 64, 0, 0, 0, 61, 0, 0, 0, 62, 0, 0, 0, 59, 0, 0, 0, 58, 0, 0, 0, 61, 0, 0, 0, 66, 0, 0, 0, 62, 0, 0, 0, 64, 0, 0, 0, 61, 0, 0, 0, 62, 0, 66, 0, 71, 0, 0, 0, 70, 0, 0, 0, 0, 0, 0, 0
@@ -66,11 +65,11 @@ NOTES:
 
 VOLUME: 
 .word 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 0, 100, 0, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 0, 100, 0, 100, 100, 0, 100, 100, 100, 0, 0, 100, 100, 0, 100, 100, 100, 0, 100, 100, 100, 0, 100, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 0, 0, 100, 0, 100, 0, 100, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0
-
 # Score position
 
 SCORE_POS:
     .word 1168
+
 
 ##############################################################################s
 # Mutable Data
@@ -99,8 +98,6 @@ VELOCITY:
 
 SCORE: 
   .word 0
-  
-
 ##############################################################################
 # Code
 ##############################################################################
@@ -128,7 +125,7 @@ main:
     jal init_new_shape
     jal draw_border # set border
     jal set_grid  #setup the grid
-
+    
     j game_loop
 
 game_loop:
@@ -152,7 +149,6 @@ game_loop:
 ### INITIALIZATION FUNCTIONS ### 
 ################################
 ################################
-
 draw_score:
 
     addi $sp, $sp, -4
@@ -230,7 +226,6 @@ draw_score:
     
     j END_AND_POP
 
-
 draw_border:
     lw $t0, ADDR_DSPL
     lw $t1, GRID_START
@@ -261,10 +256,7 @@ draw_border:
         
     
     # pop stack
-    lw $ra, ($sp)
-    addi $sp, $sp, 4
-    
-    jr $ra
+    j END_AND_POP
     
 
 draw_border_vertical:
@@ -301,7 +293,6 @@ set_grid:
     # push to stack
     addi $sp, $sp, -4
     sw $ra, ($sp)
-    
     
     jal init_grid_loop
     
@@ -569,10 +560,8 @@ draw:
     lw $t1 BLOCK_POSITION
     
     # set up grid start as a value on the addr_displ
-
     lw $s2, GRID_START
     add $s2, $s2, $t0 # where the grid starts at
-
     
     # set the block position
     la $t1 BLOCK_POSITION # offset of the block_position
@@ -582,11 +571,12 @@ draw:
 
     # if 1, then initialize a new shape
     beq $t4, 1, new_shape # initialize the shape
-
+    
+    j paint_shape
 
 paint_shape:
-    lw $t5, 0($t1) # load block position
 
+    lw $t5, 0($t1) # load block position
     add $t8, $s2, $t5  # add to the offset
     sw $s3, ($t8) # draw here
     
@@ -600,7 +590,6 @@ paint_shape:
     
     lw $t5, 12($t1)
     add $t8, $s2, $t5 
-
     sw $s3, ($t8)
     
     # pop stack
@@ -984,8 +973,9 @@ collision:
     addi $sp, $sp, -4
     sw $ra, ($sp)
     
-
+    
     la $t0, BLOCK_POSITION
+    jal check_top
 
     li $t2 , 0 #initiate iterate counter
     li $t3, -4 #left side count
@@ -1001,35 +991,72 @@ collision:
     # t2 to t8
     jal check_bottom_border # if landed on
     
-    li $t2 , 0 # intiate iterate counter
-    li $t3, 0 # counts how many values greater than 2
-    li $t4, 0 # the number of rows
-    la $t5, GRID_STATE
-
+    li $t1, 20 # counter to check a row
+    li $t2 , 0 #
+    li $t3, 0 # row
+    li $t4, 0
+    la $s0, GRID_STATE
+    addi $t5, $s0, 0
     jal check_clear_line
-    # pop stack
-    j END_AND_POP
+
+check_top:
+    lw $t2, GRID_START
+    lw $t1, ($t0)
+    add $t1, $t1, $t2
+    ble $t1, $t2, push_down
+    lw $t1, 4($t0)
+    add $t1, $t1, $t2
+    ble $t1, $t2, push_down
+    lw $t1, 8($t0)
+    add $t1, $t1, $t2
+    ble $t1, $t2, push_down
+    lw $t1, 12($t0)
+    add $t1, $t1, $t2
+    ble $t1, $t2, push_down
+    j END
+    
+
+# if we rotate something out of bounds we push it down
+push_down:
+    lw $t1, ($t0)
+    add $t1, $t1, 256
+    sw $t1, 0($t0)
+    
+    lw $t1, 4($t0)
+    add $t1, $t1, 256
+    sw $t1, 4($t0)
+    
+    lw $t1, 8($t0)
+    add $t1, $t1, 256
+    sw $t1, 8($t0)
+    
+    lw $t1, 12($t0)
+    add $t1, $t1, 256
+    sw $t1, 12($t0)
+    j END
 
 check_clear_line:
-    beq $t4, 20, END_AND_POP
-        li $t3, 0
+    addi $t1, $t1, -1
+    ble $t1, -1, END_AND_POP
+        li $t2, 0
+        li $t4, 40
+        mul $t4, $t1, $t4
+        add $t5, $s0, $t4 
         jal check_row_line
-        addi $t4, $t4, 1
+
+        
+        
     j check_clear_line
     
 check_row_line:
-    beq $t2, 10, END
-        lw $t6, ($t5)
-        bge $t6, 2, line
+    beq $t2, 10, clear_line # if all pixels on the row is coloured then...
+        lw $t3, ($t5) 
+        beq $t3, 1, END # if a pixel on the row is not colored break
+        beq $t3, 0, END # if a pixel on the row is not colored break
+        addi  $t5, $t5, 4
         addi $t2, $t2, 1
-        addi $t5, $t5, 4
-
-line:
-    addi $t3, $t3, 1
+        
     j check_row_line
-    
-    
-    
 
 clear_line:
     # we can use t4, t6, t7, t8, t9
@@ -1038,11 +1065,11 @@ clear_line:
     # t2 is a counter
     
     # add to the points systems
-    # la $t4, SCORE
-    # lw $t6, ($t4)
-    # addi $t6, $t6, 1
-    # sw $t6, ($t4)
-    # bge $t6, 999, END_GAME
+    la $t4, SCORE
+    lw $t9, ($t4)
+    addi $t9, $t9, 1
+    sw $t9, ($t4)
+
     
     li $t9 40
     mul $t4, $t9, $t1 # the offset -- how many rows we're down
@@ -1054,9 +1081,9 @@ clear_line:
     mul $t4, $t9, $t1 # the offset -- how many rows we're down
     add $s7, $s0, $t4 # the grid address to start at
     addi $t4, $t1, 0
+    addi $t1, $t1, 1
     jal shift_rows # shift lines down
     
-    addi $t1, $t1, 1
     j check_clear_line # go back 
 
 remove_line:
@@ -1255,9 +1282,7 @@ bottom_border_detected:
     # li $t1, 2
     # mul $t9, $t1, 128
     ## push it back up
-
     #next_bottom_border_detected:
-
 
     la $t5, BLOCK_POSITION
     lw $t6, ($t5)
@@ -1283,6 +1308,7 @@ check_collision_block:
     # if there is a block underneath another block
     # t0, t1 are not free to use
     
+    # load and store 
     
     # push to stack
     addi $sp, $sp, -4
@@ -1329,16 +1355,13 @@ check_bottom:
 
 
 check_left:
-
     lw $t7 ($t6) # if there is value here greater than or equal to 2, we know that we must push the block
-
     bge $t7, 2, push_right_block
 
     # if new shape that means we are placing the block
     j check_on_block_loop
 
 check_right:
-    addi $t6, $t6, 4
     lw $t7 ($t6)
     bge $t7, 2, push_left_block
     
@@ -1397,12 +1420,12 @@ push_left_block:
 place_block:
 
     # signal to create a new shape
-
     la $s2, NEW_SHAPE_FLAG
     li $t5, 1
     sw $t5, ($s2)
     # before i place the block i must check the sides and see if i need to move it
-
+    
+        
     # update blocks in the grid
     jal update_state_grid
     # since we need to place a block, we need to generate a new tetronimo
@@ -1606,7 +1629,6 @@ respond_to_w:
     la $t4, CURRENT_KEY
     sw $a0, ($t4)  
     
-    
     # PUSH TO STACK
     addi $sp, $sp, -4
     sw $ra, ($sp)
@@ -1642,6 +1664,8 @@ block_rotate:
     
     # $t7 = px, $t8 = py
     
+    # No loop here just to 
+    # put this all under this label 
     ###############################
     lw $t5, 4($t3)
     div $t5, $t6
@@ -1782,7 +1806,7 @@ tick:
     li $v0, 31
     lw $a0, 0($t3)
     lw $a3, 0($t4)
-    li $a1, 200
+    li $a1, 100
     li $a2, 0
     beq $s6, $zero, SKIP
     syscall
@@ -1790,14 +1814,14 @@ tick:
     li $v0, 32 # syscall for sleep
     li $a0, 100 # 100 millisecond sleep = 10 frames per second
     syscall 
+
+
     addi $s4, $s4, 1
-
-    beq $s4, 162,  RESET
-    j SCORE_UPDATE
-
+    beq $s4, $s5,  RESET
+    
 
     # pop
-    j END_AND_POP
+    j SCORE_UPDATE
     
 RESET:
     li $s4, 0
@@ -1810,6 +1834,26 @@ SKIP:
     syscall
     j SCORE_UPDATE
 
+gravity:
+    la $t0, BLOCK_POSITION
+    lw $t1, ($t0)
+    addi $t1, $t1, 128
+    sw $t1, ($t0)
+    
+    lw $t1, 4($t0)
+    addi $t1, $t1, 128
+    sw $t1, 4($t0)
+    
+    lw $t1, 8($t0)
+    addi $t1, $t1, 128
+    sw $t1, 8($t0)
+    
+    lw $t1, 12($t0)
+    addi $t1, $t1, 128
+    sw $t1, 12($t0)
+    
+    j END
+    
 SCORE_UPDATE:
     li $t9, 999
     lw $t7, SCORE_POS
@@ -1836,28 +1880,6 @@ SCORE_UPDATE:
     jal ERASE
     jal CHECK_VAL
     j END_AND_POP
-
-
-gravity:
-    la $t0, BLOCK_POSITION
-    lw $t1, ($t0)
-    addi $t1, $t1, 128
-    sw $t1, ($t0)
-    
-    lw $t1, 4($t0)
-    addi $t1, $t1, 128
-    sw $t1, 4($t0)
-    
-    lw $t1, 8($t0)
-    addi $t1, $t1, 128
-    sw $t1, 8($t0)
-    
-    lw $t1, 12($t0)
-    addi $t1, $t1, 128
-    sw $t1, 12($t0)
-    
-    j END
-
     
     
 CHECK_VAL:
@@ -1894,7 +1916,6 @@ ERASE:
     sw $t2, 520($t0)
     
     jr $ra
-    
 ## END FUNCTIONALITIES FOR LOOPS##
 
 END_AND_POP: 
